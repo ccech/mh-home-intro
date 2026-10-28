@@ -13,12 +13,12 @@
 <body class="intro">
 <section class="hero">
 <div class="stage" id="stage">
+  <div class="frame" aria-hidden="true"></div>
   <h1 class="hl">Mental health care that adapts</h1>
-  <div class="rule" style="top:356px"></div>
+  <div class="rule" aria-hidden="true"></div>
   <p class="follow" id="follow" aria-live="polite"><span class="to">to</span></p>
-  <div class="rule" style="top:571px"></div>
   <p class="copy">One global mental health benefit connecting employees to coaching, therapy, and more, with clinical guidance to help them find support that fits their needs.</p>
-  <a class="btn" href="#">Learn more</a>
+  <div class="btns"><a class="btn" href="#">Talk to our team</a><a class="btn btn--ghost" href="#">How it works</a></div>
 </div>
 </section>
 <div class="photos" id="photos"><div id="cards"></div></div>
@@ -48,16 +48,16 @@
   const clamp01 = u => Math.max(0, Math.min(1, u));
 
   // ---------- The stack (Figma 4015:1327) ----------
-  // Five resting poses along a line that recedes to the right. Position 0 is the main photo; 1 and 2 are the
+  // Five resting poses along a line that recedes to the right (Figma 4015:1327, revised). Position 0 is the main photo; 1 and 2 are the
   // two in the comp (veiled to 51% like the design); 3 waits just off the right edge; 4 is out of sight.
   // rot = turn away from the viewer (deg), veil = fade toward the background, blur = depth of field (Focus only),
   // hz = haze from the hero's light corner washing over the photo.
   const POSES = [
-    { cx: 706 + 217,    cy: 407, w: 434, rot: 0,  veil: 0,   blur: 0, op: 1, hz: 0 },
-    { cx: 1046 + 153.5, cy: 407, w: 307, rot: 20, veil: .49, blur: 3, op: 1, hz: .7 },
-    { cx: 1293 + 105.5, cy: 407, w: 211, rot: 32, veil: .49, blur: 5, op: 1, hz: .9 },
-    { cx: 1500,         cy: 407, w: 156, rot: 42, veil: .65, blur: 7, op: 1, hz: 1 },
-    { cx: 1580,         cy: 407, w: 120, rot: 48, veil: .8,  blur: 8, op: 0, hz: 1 },
+    { cx: 636 + 217,    cy: 407, w: 434, rot: 0,  veil: 0,   blur: 0, op: 1, hz: 0 },
+    { cx: 1001 + 153.5, cy: 407, w: 307, rot: 20, veil: .49, blur: 3, op: 1, hz: .7 },
+    { cx: 1254 + 105.5, cy: 407, w: 211, rot: 32, veil: .49, blur: 5, op: 1, hz: .9 },
+    { cx: 1480,         cy: 407, w: 156, rot: 42, veil: .65, blur: 7, op: 1, hz: 1 },
+    { cx: 1570,         cy: 407, w: 120, rot: 48, veil: .8,  blur: 8, op: 0, hz: 1 },
   ];
   const zAt = pos => 10 - pos;
   const KEYS = ['cx', 'cy', 'w', 'rot', 'veil', 'blur', 'op', 'fblur', 'hz'];
@@ -203,7 +203,7 @@
     turn: {
       label: 'Turn',
       note: 'The front photo swings away like a turning card; the next one rotates round to face you.',
-      exit: { pose: pose(front, { cx: 720, cy: 418, w: 380, rot: -70, veil: .25, op: 0 }), dur: 2600, z: 12, lift: .6 },
+      exit: { pose: pose(front, { cx: 660, cy: 418, w: 380, rot: -70, veil: .25, op: 0 }), dur: 2600, z: 12, lift: .6 },
       advanceAt: 350, textOut: 1500, textIn: 800,
     },
     lift: {
@@ -215,7 +215,7 @@
     focus: {
       label: 'Focus',
       note: 'Depth of field: the line sits out of focus and sharpens as each photo reaches the front. The old one sinks back behind it.',
-      exit: { pose: pose(front, { cx: 1120, w: 230, rot: 24, veil: .85, op: 0, fblur: 6 }), dur: 2700, z: 1 },
+      exit: { pose: pose(front, { cx: 1080, w: 230, rot: 24, veil: .85, op: 0, fblur: 6 }), dur: 2700, z: 1 },
       advanceAt: 450, textOut: 1600, textIn: 800,
     },
     rise: {
@@ -312,6 +312,13 @@
     mNav.querySelectorAll('[data-d]').forEach(x => x.setAttribute('aria-pressed', (x.dataset.d === '3d') === depth));
   });
   document.body.appendChild(mNav);
+
+  // Reveal the prototype controls only when the pointer heads toward them
+  addEventListener('mousemove', e => {
+    document.body.classList.toggle('chrome-top', e.clientY < 150 && e.clientX < 860);
+    document.body.classList.toggle('chrome-bottom', e.clientY > innerHeight - 100);
+  });
+  document.documentElement.addEventListener('mouseleave', () => document.body.classList.remove('chrome-top', 'chrome-bottom'));
 
   // ---------- Run ----------
   const t0 = performance.now();
