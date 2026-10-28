@@ -1,0 +1,420 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Float Motion — Home Intro</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@1,400&family=Montserrat:wght@600&display=swap">
+<link rel="stylesheet" href="float.css">
+<script src="chrome.js"></script>
+</head>
+<body class="intro">
+<section class="hero">
+<div class="stage" id="stage">
+
+  <h1 class="hl">Mental health care that adapts</h1>
+  <p class="follow" id="follow" aria-live="polite"><span class="to">to</span></p>
+
+  <p class="copy">One global mental health benefit connecting employees to coaching, therapy, and more, with clinical guidance to help them find support that fits their needs.</p>
+  <a class="btn" href="#">Learn more</a>
+</div>
+</section>
+<div class="photos" id="photos"><div id="cards"></div></div>
+<section class="next"><span>Next section</span></section>
+
+<div class="ctrl" id="ctrl">
+  <button class="pause" id="pause" aria-label="Pause"></button>
+</div>
+
+<script src="support.js"></script>
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const W = 1440, H = 814, BASE_W = 310, BASE_H = 441;
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // ?t=ms freezes the sequence at that moment (for screenshots / review)
+  const params = new URLSearchParams(location.search);
+  const jump = params.get('t');
+  // Review helpers: ?vh=814 fixes the hero height, ?p=0..1 forces the scroll hand-off progress
+  if (params.has('vh')) document.querySelector('.hero').style.height = params.get('vh') + 'px';
+  const forcedP = params.has('p') ? +params.get('p') : undefined;
+  if (jump !== null) document.body.classList.add('frozen');
+
+  // ---------- Slots (Figma 4011:1190) ----------
+  const SLOTS = [
+    { x: 561,  y: 114, w: 310 },  // main
+    { x: 49,   y: -16, w: 129 },  // top left
+    { x: 1254, y: 22,  w: 129 },  // top right
+    { x: 1109, y: 495, w: 106 },  // right
+    { x: 84,   y: 561, w: 129 },  // bottom left
+  ];
+
+  // ---------- Lines + the photo that leads each one ----------
+  // crop = Figma image fill as % of the frame (scale-invariant, so it holds at every slot size)
+  const ITEMS = [
+    { line: 'your whole workforce',   src: '../assets/float/commuter.jpg',    slot: 0, crop: { w: 247.12, h: 116.05, l: -75.54, t: -13.45 } },
+    { line: 'each employee’s needs',  src: '../assets/float/couch-woman.jpg', slot: 1, crop: { w: 254.65, h: 119.67, l: -115.91, t: -0.77 } },
+    { line: 'global complexity',      src: '../assets/float/bearded-man.jpg', slot: 4 },
+    { line: 'your business strategy', src: '../assets/float/laptop-man.jpg',  slot: 2 },
+    { line: 'your clients’ needs',    src: '../assets/float/curly-woman.jpg', slot: 3, crop: { w: 213.33, h: 100, l: -35.37, t: 0 } },
+  ];
+
+  // ---------- Stage fit ----------
+  const stage = $('stage');
+  // Support module: card index → row column (-1 = floats away; the couch photo has no place in the row)
+  const support = FloatSupport.create({ map: [1, -1, 0, 3, 2] });
+  const photos = $('photos');
+  let fitK = 1;
+  const fit = () => {
+    const hero = stage.parentElement;
+    fitK = Math.min(innerWidth / W, hero.clientHeight / H);
+    stage.style.transform = `scale(${fitK}) translate(-50%, -50%)`;
+    const left = (innerWidth - W * fitK) / 2, top = hero.offsetTop + (hero.clientHeight - H * fitK) / 2;
+    photos.style.transform = `translate(${left}px, ${top}px) scale(${fitK})`;
+    support.layout(fitK, top);
+  };
+  addEventListener('resize', fit); fit();
+
+  // ---------- Cards ----------
+  const cardsEl = $('cards');
+  const cards = ITEMS.map((it, i) => {
+    const el = document.createElement('div');
+    el.className = 'card';
+    const img = new Image();
+    img.src = it.src; img.alt = '';
+    if (it.crop) Object.assign(img.style, { width: it.crop.w + '%', height: it.crop.h + '%', left: it.crop.l + '%', top: it.crop.t + '%' });
+    else img.className = 'cover';
+    el.appendChild(img);
+    cardsEl.appendChild(el);
+    support.bindCard(el, i);
+    // Each card breathes on its own slow, slightly irrational periods so the group never visibly loops
+    const r = k => Math.sin(i * 12.9898 + k * 78.233) * 43758.5453 % 1;
+    return {
+      el, i, slot: it.slot, tween: null, born: 0,
+      drift: { px: 2 * Math.PI / (11 + 4 * Math.abs(r(1))), py: 2 * Math.PI / (13 + 5 * Math.abs(r(2))), pr: 2 * Math.PI / (17 + 6 * Math.abs(r(3))), o: i * 1.7 },
+    };
+  });
+
+  const ease = u => u < .5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2;      // in-out cubic
+  const easeSine = u => -(Math.cos(Math.PI * u) - 1) / 2;
+  const lerp = (a, b, u) => a + (b - a) * u;
+  const clamp01 = u => Math.max(0, Math.min(1, u));
+
+  const AR = 441 / 310;
+  const centre = r => ({ x: r.x + r.w / 2, y: r.y + r.w * AR / 2 });
+  const fromCentre = (cx, cy, w) => ({ x: cx - w / 2, y: cy - w * AR / 2, w });
+
+  // All photos stay beneath the type (z 5): arriving 4, departing 3, main 2, supporting 1
+  const restZ = c => c.slot === 0 ? 2 : 1;
+
+  // Scroll: eased toward the real scroll position so photos respond with a little float, not a lock-step
+  let sp = 0;
+
+  function place(c, t) {
+    let r = SLOTS[c.slot], lift = 0, opacity = 1, z = restZ(c), blur = 0;
+    if (c.tween) {
+      const tw = c.tween;
+      const u = clamp01((t - tw.start) / tw.dur);
+      const e = ease(u);
+      let fx = null;
+      if (tw.jump != null) {
+        // Jump tweens never travel: the photo leaves one spot (outFx) and, once invisible, appears in the other (inFx)
+        const a = tw.jump;
+        if (u < a) { fx = tw.outFx(u / a); r = tw.from; }
+        else { fx = tw.inFx((u - a) / (1 - a)); r = tw.to; }
+      } else {
+        const A = centre(tw.from), B = centre(tw.to);
+        const dx = B.x - A.x, dy = B.y - A.y, len = Math.hypot(dx, dy) || 1;
+        let nx = -dy / len, ny = dx / len, arc = 0;
+        if (tw.arc === 'out') {
+          // Orbit: bow away from the centre of the stage, so the ring reads as a loop
+          const mx = (A.x + B.x) / 2 - W / 2, my = (A.y + B.y) / 2 - H / 2;
+          if (nx * mx + ny * my < 0) { nx = -nx; ny = -ny; }
+          arc = Math.sin(Math.PI * e) * Math.min(110, len * .22);
+        } else if (tw.arc) {
+          // Long journeys bow gently away from the headline band (y≈350) instead of running on rails
+          if (Math.sign(ny) !== Math.sign((A.y + B.y) / 2 - 350)) { nx = -nx; ny = -ny; }
+          arc = Math.sin(Math.PI * e) * Math.min(90, len * .16);
+        }
+        r = fromCentre(lerp(A.x, B.x, e) + nx * arc, lerp(A.y, B.y, e) + ny * arc, lerp(tw.from.w, tw.to.w, easeSine(u)));
+        if (tw.fx) fx = tw.fx(u);
+      }
+      if (fx) {
+        const m = centre(r);
+        r = fromCentre(m.x, m.y + (fx.dy || 0), r.w * (fx.sc ?? 1));
+        opacity *= fx.op ?? 1;
+        blur = fx.blur || 0;
+      }
+      lift = Math.sin(Math.PI * u) * (tw.lift || 0);
+      z = tw.z;
+      if (u >= 1) c.tween = null;
+    }
+    c.base = r;
+    c.blur = blur;
+    let { x, y, w } = r;
+    const k = w / BASE_W;
+    // Drift: supporting photos wander; the main photo sits still (eases out smoothly as a photo grows into the slot)
+    const f = reduce ? 0 : 1 - clamp01((w - 106) / (310 - 106));
+    const d = c.drift, amp = 14 * f;
+    const ts = t / 1000 + d.o;
+    x += Math.sin(ts * d.px) * amp;
+    y += Math.sin(ts * d.py + 1.3) * amp * .9;
+    const rot = Math.sin(ts * d.pr) * .9 * f;
+    // Load-in: each photo settles up into place
+    const b = clamp01((t - c.born) / 2200);
+    const be = 1 - Math.pow(1 - b, 3);
+    y += (1 - be) * 30;
+    opacity *= be;
+    // Colourway: supporting photos may sit back (Navy and Sky use 40%); the main photo is always full strength.
+    // Tied to size, so a photo brightens smoothly as it grows into the middle.
+    opacity *= lerp(1, FloatChrome.dim, clamp01((310 - r.w) / (310 - 129)));
+    // Scroll hand-off: float down from the hero into the support row; drift and lift calm down as it lands
+    const B = support.blend(c.i, { x: r.x, y: r.y + (1 - be) * 30, w: r.w }, opacity);
+    if (B.e > 0) {
+      const dxy = { x: x - r.x, y: y - r.y - (1 - be) * 30 };
+      ({ x, y, w } = B.r);
+      x += dxy.x * (1 - B.e); y += dxy.y * (1 - B.e);
+      opacity = B.opacity; lift *= 1 - B.e;
+      if (B.e > .5) z = B.z;
+      return draw(c, x, y, w, rot * (1 - B.e), opacity, z, lift, 1 - .7 * B.e);
+    }
+    draw(c, x, y, w, rot, opacity, z, lift, 1);
+  }
+
+  function draw(c, x, y, w, rot, opacity, z, lift, sha) {
+    const k = w / BASE_W;
+    c.el.style.transform = `translate(${x}px, ${y}px) rotate(${rot}deg) scale(${k})`;
+    c.el.style.borderRadius = `${10 / k}px`;
+    c.el.style.opacity = opacity;
+    c.el.style.zIndex = z;
+    c.el.style.setProperty('--lift', lift.toFixed(3));
+    c.el.style.setProperty('--sh', (1 / Math.sqrt(k)).toFixed(3));
+    c.el.style.setProperty('--sha', sha.toFixed(3));
+    // Blur is set in the card's own (unscaled) units, so divide by the scale to keep it visually constant
+    c.el.style.filter = c.blur > .05 ? `blur(${(c.blur / k).toFixed(2)}px)` : '';
+  }
+
+  // ---------- Follow-up lines, split by letter ----------
+  const follow = $('follow');
+  function makeLine(text) {
+    const el = document.createElement('span');
+    el.className = 'line';
+    el.setAttribute('aria-label', 'to ' + text);
+    el.innerHTML = '<span class="spacer" aria-hidden="true">to </span>';
+    let i = 0;
+    text.split(' ').forEach((word, wi) => {
+      if (wi) el.appendChild(document.createTextNode(' '));
+      const w = document.createElement('span');
+      w.className = 'w'; w.setAttribute('aria-hidden', 'true');
+      for (const ch of word) {
+        const s = document.createElement('span');
+        s.className = 'ch'; s.textContent = ch; s.style.setProperty('--i', i++);
+        w.appendChild(s);
+      }
+      el.appendChild(w);
+    });
+    follow.appendChild(el);
+    return el;
+  }
+  let lineEl = null;
+  // Old line lifts away after `outAt` ms; the new one rises in `inAfter` ms later
+  function showLine(text, outAt, inAfter) {
+    const old = lineEl;
+    const el = makeLine(text);
+    lineEl = el;
+    if (document.body.classList.contains('frozen')) { old?.remove(); el.classList.add('in'); return; }
+    setTimeout(() => {
+      if (old) { old.classList.remove('in'); old.classList.add('out'); setTimeout(() => old.remove(), 2000); }
+      setTimeout(() => requestAnimationFrame(() => el.classList.add('in')), inAfter);
+    }, outAt);
+  }
+
+  // ---------- Sequence ----------
+  // One slow journey per line: the next photo sets off from its spot and lands in the middle
+  // just as its line rises in; the current photo slips out from underneath during the last stretch.
+  const HOLD = 5200;                        // ms from one departure to the next
+  const TRAVEL = reduce ? 1 : 4400;         // incoming photo, its spot → main
+  const OUT_START = reduce ? 0 : 1800;      // when the main photo starts drifting out…
+  const OUT_DUR = reduce ? 1 : 3200;        // …and how long it takes to reach the freed spot
+  let cur = 0, next = 0, swapUntil = 0, paused = false;
+
+  const ctrl = $('ctrl'), pauseBtn = $('pause');
+  const dots = ITEMS.map((it, i) => {
+    const b = document.createElement('button');
+    b.className = 'dot'; b.setAttribute('aria-label', 'to ' + it.line);
+    b.addEventListener('click', () => go(i, performance.now()));
+    ctrl.insertBefore(b, pauseBtn);
+    return b;
+  });
+  const ICON_PAUSE = '<svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><rect x="2" y="1" width="2.6" height="10" rx="1"/><rect x="7.4" y="1" width="2.6" height="10" rx="1"/></svg>';
+  const ICON_PLAY  = '<svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M3 1.4v9.2a.6.6 0 0 0 .9.5l7.4-4.6a.6.6 0 0 0 0-1L3.9.9a.6.6 0 0 0-.9.5z"/></svg>';
+  const syncUi = () => {
+    dots.forEach((d, i) => d.setAttribute('aria-current', i === cur));
+    pauseBtn.innerHTML = paused ? ICON_PLAY : ICON_PAUSE;
+    pauseBtn.setAttribute('aria-label', paused ? 'Play' : 'Pause');
+  };
+  pauseBtn.addEventListener('click', () => { paused = !paused; if (!paused) next = performance.now() + 1200; syncUi(); });
+
+  // ---------- Arrival styles ----------
+  // Each plan sets the photo tweens for one line change and says when the words change.
+  // textOut = ms until the old line lifts away; textIn = ms after that until the new one rises.
+  const easeOut = u => 1 - Math.pow(1 - u, 3);
+  const RING = [0, 4, 1, 2, 3];   // Orbit loop: main → bottom-left → top-left → top-right → right → main
+  const MOTIONS = {
+    glide: {
+      label: 'Glide',
+      note: 'The next photo glides in on a soft curve; the main one slips out underneath.',
+      plan({ t, incoming, outgoing, vacated }) {
+        incoming.tween = { from: incoming.base, to: SLOTS[0], start: t, dur: TRAVEL, z: 4, arc: true, lift: .8 };
+        outgoing.tween = { from: outgoing.base, to: SLOTS[vacated], start: t + OUT_START, dur: OUT_DUR, z: 3, lift: .4 };
+        return { until: t + Math.max(TRAVEL, OUT_START + OUT_DUR), textOut: TRAVEL - 1000, textIn: 800 };
+      },
+    },
+    dissolve: {
+      label: 'Dissolve',
+      note: 'Nothing travels. Photos fade out of one spot and come into focus in the next.',
+      plan({ t, incoming, outgoing, vacated }) {
+        incoming.tween = { from: incoming.base, to: SLOTS[0], start: t, dur: 3200, z: 4, jump: .38,
+          outFx: v => ({ op: 1 - easeSine(v), sc: 1 - .05 * v }),
+          inFx: v => ({ op: easeSine(v), sc: .965 + .035 * easeOut(v), blur: 10 * (1 - easeOut(v)) }) };
+        outgoing.tween = { from: outgoing.base, to: SLOTS[vacated], start: t + 2000, dur: 2800, z: 3, jump: .45,
+          outFx: v => ({ op: 1 - easeSine(v), sc: 1 - .03 * v, blur: 4 * v }),
+          inFx: v => ({ op: easeSine(v), sc: .95 + .05 * easeOut(v), blur: 6 * (1 - v) }) };
+        return { until: t + 4800, textOut: 1100, textIn: 800 };
+      },
+    },
+    focus: {
+      label: 'Focus',
+      note: 'Depth of field: the main photo sinks back out of focus while the next one comes forward and sharpens.',
+      plan({ t, incoming, outgoing, vacated }) {
+        incoming.tween = { from: incoming.base, to: SLOTS[0], start: t, dur: 3400, z: 4, lift: 1,
+          fx: u => ({ blur: 5 * (1 - easeSine(u)) * Math.min(1, u * 5) }) };
+        outgoing.tween = { from: outgoing.base, to: SLOTS[vacated], start: t + 1300, dur: 3400, z: 3, jump: .55,
+          outFx: v => ({ sc: 1 - .16 * easeSine(v), blur: 9 * easeSine(v), op: 1 - easeSine(v) }),
+          inFx: v => ({ op: easeSine(v), sc: .88 + .12 * easeOut(v), blur: 7 * (1 - v) }) };
+        return { until: t + 4700, textOut: 2300, textIn: 800 };
+      },
+    },
+    orbit: {
+      label: 'Orbit',
+      note: 'The whole set turns one step around a slow loop, carrying the next photo into the middle.',
+      plan({ t, incoming, outgoing }) {
+        const s = RING.indexOf(incoming.slot);
+        for (const c of cards) {
+          const k = (RING.indexOf(c.slot) - s + RING.length) % RING.length;
+          c.tween = { from: c.base, to: SLOTS[RING[k]], start: t + (c === outgoing ? 150 : 0), dur: 3800, arc: 'out',
+            z: k === 0 ? 4 : c === outgoing ? 3 : 1, lift: k === 0 ? .8 : .3 };
+          c.nextSlot = RING[k];
+        }
+        for (const c of cards) c.slot = c.nextSlot;
+        return { until: t + 4000, textOut: 2400, textIn: 800, slotted: true };
+      },
+      // Seat the photos around the loop in line order, so each turn brings the next line's photo to the middle
+      seat(t) {
+        cards.forEach((c, i) => {
+          const k = (i - cur + ITEMS.length) % ITEMS.length;
+          if (c.slot === RING[k]) return;
+          c.tween = { from: c.base, to: SLOTS[RING[k]], start: t, dur: 2200, arc: 'out', z: k === 0 ? 4 : 1, lift: .3 };
+          c.slot = RING[k];
+        });
+        return t + 2200;
+      },
+    },
+    rise: {
+      label: 'Rise',
+      note: 'Buoyant: photos drift up and away, then rise gently into their new spots from below.',
+      plan({ t, incoming, outgoing, vacated }) {
+        incoming.tween = { from: incoming.base, to: SLOTS[0], start: t, dur: 3800, z: 4, jump: .36,
+          outFx: v => ({ op: 1 - easeSine(v), dy: -30 * easeSine(v) }),
+          inFx: v => ({ op: easeSine(v), dy: 90 * (1 - easeOut(v)) }) };
+        outgoing.tween = { from: outgoing.base, to: SLOTS[vacated], start: t + 1700, dur: 3300, z: 3, jump: .5,
+          outFx: v => ({ op: 1 - easeSine(v), dy: -70 * easeSine(v) }),
+          inFx: v => ({ op: easeSine(v), dy: 50 * (1 - easeOut(v)) }) };
+        return { until: t + 5000, textOut: 1300, textIn: 900 };
+      },
+    },
+  };
+  const motionStore = {
+    get() { try { return localStorage.getItem('float-motion'); } catch { return null; } },
+    set(v) { try { localStorage.setItem('float-motion', v); } catch {} },
+  };
+  const mParam = params.get('m');
+  let motion = MOTIONS[mParam] ? mParam : MOTIONS[motionStore.get()] ? motionStore.get() : 'glide';
+  let reseat = false;
+  // Loading straight into Orbit: start already seated around the loop
+  if (motion === 'orbit') cards.forEach((c, i) => { c.slot = RING[(i - cur + ITEMS.length) % ITEMS.length]; });
+
+  function go(i, t) {
+    if (i === cur || t < swapUntil) return;
+    const incoming = cards[i], outgoing = cards[cur];
+    const vacated = incoming.slot;
+    const plan = MOTIONS[motion].plan({ t, incoming, outgoing, vacated });
+    if (!plan.slotted) { outgoing.slot = vacated; incoming.slot = 0; }
+    swapUntil = plan.until;
+    cur = i;
+    showLine(ITEMS[i].line, reduce ? 0 : plan.textOut, reduce ? 0 : plan.textIn);
+    next = t + HOLD;
+    syncUi();
+  }
+
+  // Arrival-style picker
+  const mNav = document.createElement('nav');
+  mNav.className = 'switcher switcher--motion';
+  mNav.setAttribute('aria-label', 'Arrival style');
+  mNav.innerHTML = '<span class="switcher-label">Arrival</span>' +
+    Object.entries(MOTIONS).map(([id, m]) => `<button type="button" data-m="${id}" aria-pressed="${id === motion}">${m.label}</button>`).join('') +
+    `<span class="motion-note" id="motion-note">${MOTIONS[motion].note}</span>`;
+  mNav.addEventListener('click', e => {
+    const b = e.target.closest('[data-m]');
+    if (!b || b.dataset.m === motion) return;
+    motion = b.dataset.m;
+    motionStore.set(motion);
+    const q = new URLSearchParams(location.search); q.set('m', motion); q.delete('t');
+    history.replaceState(null, '', '?' + q.toString());
+    mNav.querySelectorAll('[data-m]').forEach(x => x.setAttribute('aria-pressed', x.dataset.m === motion));
+    $('motion-note').textContent = MOTIONS[motion].note;
+    if (motion === 'orbit') reseat = true;
+    // Show the new style straight away
+    next = Math.min(next, performance.now() + 900);
+  });
+  document.body.appendChild(mNav);
+
+  addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight') go((cur + 1) % ITEMS.length, performance.now());
+    if (e.key === 'ArrowLeft') go((cur + ITEMS.length - 1) % ITEMS.length, performance.now());
+    if (e.key === ' ') { e.preventDefault(); pauseBtn.click(); }
+  });
+
+  // Load-in: photos rise in one by one, then the headline, then the first line
+  const t0 = performance.now();
+  [0, 1, 3, 2, 4].forEach((i, n) => { cards[i].born = t0 + 200 + n * 260; });
+  requestAnimationFrame(() => document.body.classList.remove('intro'));
+  showLine(ITEMS[0].line, 0, 900);
+  next = t0 + 2600;
+  syncUi();
+
+  function step(t) {
+    if (reseat && cards[0].base && t >= swapUntil) { reseat = false; swapUntil = MOTIONS.orbit.seat(t); next = Math.max(next, swapUntil + 600); }
+    if (!paused && t >= next) go((cur + 1) % ITEMS.length, t);
+    if (paused) next = Math.max(next, t + 1200);
+    sp += (scrollY - sp) * (jump !== null ? 1 : .07);
+    support.update(sp, forcedP);
+    // Hold the hero rotation while the photos are away in the next section
+    if (support.p > .02) next = Math.max(next, t + 1500);
+    cards.forEach(c => place(c, t));
+  }
+
+  if (jump !== null) {
+    // ?y=px also scrolls the page (for screenshots)
+    scrollTo(0, +new URLSearchParams(location.search).get('y') || 0);
+    for (let t = t0; t <= t0 + +jump; t += 16) step(t);
+    return;
+  }
+  const frame = t => { step(t); requestAnimationFrame(frame); };
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+# Earlier explorations stay local; this repo publishes the Float, Float Motion and Stack concepts only.
+home-intro*.html
+home-intro/
+assets/home-intro/
+consultants-explore.html
+sandbox.html
+style-guide.md

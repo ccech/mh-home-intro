@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Home Intro Prototypes</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;1,400&family=Montserrat:wght@500;600&display=swap">
+<style>
+  /* Index of the home intro concepts. Modern Health neutral palette, Lora + Montserrat. */
+  :root {
+    --page: #F6EFE8;
+    --ink: #4B4742;
+    --muted: #7A746D;
+    --rule: #D9D0C7;
+    --accent: #005399;
+    --card: #FDF9F7;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: linear-gradient(106.77deg, #FDF9F7 0.88%, var(--page) 100%) fixed, var(--page);
+    color: var(--ink); font: 500 16px/1.5 'Montserrat', system-ui, sans-serif; -webkit-font-smoothing: antialiased;
+    padding-inline: 24px; padding-block: 72px 96px;
+  }
+  main { max-width: 960px; margin: 0 auto; }
+  .eyebrow { font-size: 12.8px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin: 0 0 16px; }
+  h1 { font: 400 clamp(40px, 6vw, 61px)/1.15 'Lora', Georgia, serif; letter-spacing: -.02em; margin: 0 0 20px; text-wrap: balance; }
+  h1 em { font-style: italic; }
+  .lede { max-width: 58ch; margin: 0 0 56px; color: var(--ink); }
+  ul { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--rule); }
+  li { border-bottom: 1px solid var(--rule); }
+  .concept { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 32px; align-items: baseline; padding-block: 28px; }
+  .concept h2 { font: 400 32px/1.2 'Lora', Georgia, serif; margin: 0; }
+  .concept p { grid-column: 1; margin: 0; max-width: 60ch; color: var(--muted); }
+  .links { grid-column: 2; grid-row: 1 / span 2; display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; align-self: center; }
+  .links a {
+    display: inline-block; padding: 12px 22px; border-radius: 999px; text-decoration: none; font-weight: 600; font-size: 15px;
+    background: var(--accent); color: #FFFFFF;
+  }
+  .links a.ghost { background: transparent; color: var(--accent); box-shadow: inset 0 0 0 1.5px var(--accent); }
+  .links a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  .note { margin-top: 40px; font-size: 14px; color: var(--muted); max-width: 70ch; }
+  @media (max-width: 640px) {
+    .concept { grid-template-columns: minmax(0, 1fr); }
+    .links { grid-column: 1; grid-row: auto; justify-content: flex-start; margin-top: 12px; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <p class="eyebrow">Modern Health · Home page</p>
+  <h1>Mental health care that <em>adapts</em></h1>
+  <p class="lede">Motion prototypes for the home page hero and the "How we support your organization" module. Each one rotates through the audience lines, then glides down into the module on scroll. Use the picker at the top-left of any page to switch colorway (Neutral, Navy, Sky).</p>
+
+  <ul>
+    <li class="concept">
+      <h2>Float</h2>
+      <p>Scattered photos drift gently; on each line change the next photo glides into the middle. Build starts with one photo and adds the rest as the lines rotate.</p>
+      <div class="links"><a href="float/index.html">Float</a><a class="ghost" href="float/build.html">Build</a></div>
+    </li>
+    <li class="concept">
+      <h2>Float Motion</h2>
+      <p>The Float layout with five ways for a photo to arrive: Glide, Dissolve, Focus, Orbit and Rise, switchable live from the Arrival picker.</p>
+      <div class="links"><a href="float-motion/index.html">Float Motion</a></div>
+    </li>
+    <li class="concept">
+      <h2>Stack</h2>
+      <p>Text on the left, photos in a line receding into space on the right. Cards turn to face you as they come forward and clear out of the haze. Arrival styles: Turn, Lift, Focus, Rise, with 3D or Flat depth.</p>
+      <div class="links"><a href="stack/index.html">Stack</a></div>
+    </li>
+  </ul>
+
+  <p class="note">Best viewed on a desktop browser. Scroll lock is on by default (one scroll plays the hand-off into the module); switch to Free at the bottom-left. Photos are watermarked placeholder comps.</p>
+</main>
+</body>
+</html>

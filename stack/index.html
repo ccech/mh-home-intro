@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Stack — Home Intro</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@1,400&family=Montserrat:wght@600&display=swap">
+<link rel="stylesheet" href="stack.css">
+<script src="chrome.js"></script>
+</head>
+<body class="intro">
+<section class="hero">
+<div class="stage" id="stage">
+  <h1 class="hl">Mental health care that adapts</h1>
+  <div class="rule" style="top:356px"></div>
+  <p class="follow" id="follow" aria-live="polite"><span class="to">to</span></p>
+  <div class="rule" style="top:571px"></div>
+  <p class="copy">One global mental health benefit connecting employees to coaching, therapy, and more, with clinical guidance to help them find support that fits their needs.</p>
+  <a class="btn" href="#">Learn more</a>
+</div>
+</section>
+<div class="photos" id="photos"><div id="cards"></div></div>
+<section class="next"><span>Next section</span></section>
+
+<div class="ctrl" id="ctrl">
+  <button class="pause" id="pause" aria-label="Pause"></button>
+</div>
+
+<script src="support.js"></script>
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const W = 1440, H = 814, BASE_W = 310, BASE_H = 441, AR = BASE_H / BASE_W;
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const params = new URLSearchParams(location.search);
+  // ?t=ms freezes the sequence at that moment; ?vh=814 fixes the hero height; ?p=0..1 forces the scroll hand-off
+  const jump = params.get('t');
+  if (jump !== null) document.body.classList.add('frozen');
+  if (params.has('vh')) document.querySelector('.hero').style.height = params.get('vh') + 'px';
+  const forcedP = params.has('p') ? +params.get('p') : undefined;
+
+  const ease = u => u < .5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2;
+  const easeSine = u => -(Math.cos(Math.PI * u) - 1) / 2;
+  const easeOut = u => 1 - Math.pow(1 - u, 3);
+  const lerp = (a, b, u) => a + (b - a) * u;
+  const clamp01 = u => Math.max(0, Math.min(1, u));
+
+  // ---------- The stack (Figma 4015:1327) ----------
+  // Five resting poses along a line that recedes to the right. Position 0 is the main photo; 1 and 2 are the
+  // two in the comp (veiled to 51% like the design); 3 waits just off the right edge; 4 is out of sight.
+  // rot = turn away from the viewer (deg), veil = fade toward the background, blur = depth of field (Focus only),
+  // hz = haze from the hero's light corner washing over the photo.
+  const POSES = [
+    { cx: 706 + 217,    cy: 407, w: 434, rot: 0,  veil: 0,   blur: 0, op: 1, hz: 0 },
+    { cx: 1046 + 153.5, cy: 407, w: 307, rot: 20, veil: .49, blur: 3, op: 1, hz: .7 },
+    { cx: 1293 + 105.5, cy: 407, w: 211, rot: 32, veil: .49, blur: 5, op: 1, hz: .9 },
+    { cx: 1500,         cy: 407, w: 156, rot: 42, veil: .65, blur: 7, op: 1, hz: 1 },
+    { cx: 1580,         cy: 407, w: 120, rot: 48, veil: .8,  blur: 8, op: 0, hz: 1 },
+  ];
+  const zAt = pos => 10 - pos;
+  const KEYS = ['cx', 'cy', 'w', 'rot', 'veil', 'blur', 'op', 'fblur', 'hz'];
+  const pose = (p, extra) => Object.assign({ fblur: 0 }, p, extra);
+  const mix = (a, b, u) => { const o = {}; for (const k of KEYS) o[k] = lerp(a[k] ?? 0, b[k] ?? 0, u); return o; };
+
+  // ---------- Lines + photos, in stack order ----------
+  const ITEMS = [
+    { line: 'your whole workforce',   src: '../assets/float/commuter.jpg',    crop: { w: 247.12, h: 116.05, l: -75.54, t: -13.45 } },
+    { line: 'global complexity',      src: '../assets/float/bearded-man.jpg' },
+    { line: 'your clients’ needs',    src: '../assets/float/curly-woman.jpg', crop: { w: 213.33, h: 100, l: -35.37, t: 0 } },
+    { line: 'each employee’s needs',  src: '../assets/float/couch-woman.jpg', crop: { w: 254.65, h: 119.67, l: -115.91, t: -0.77 } },
+    { line: 'your business strategy', src: '../assets/float/laptop-man.jpg' },
+  ];
+
+  // ---------- Stage fit + support module ----------
+  const stage = $('stage'), photos = $('photos');
+  // Support module: card index → row column (-1 = lifts away; the couch photo has no place in the row)
+  const support = FloatSupport.create({ map: [1, 0, 2, -1, 3] });
+  let fitK = 1;
+  const fit = () => {
+    const hero = stage.parentElement;
+    fitK = Math.min(innerWidth / W, hero.clientHeight / H);
+    stage.style.transform = `scale(${fitK}) translate(-50%, -50%)`;
+    const left = (innerWidth - W * fitK) / 2, top = hero.offsetTop + (hero.clientHeight - H * fitK) / 2;
+    photos.style.transform = `translate(${left}px, ${top}px) scale(${fitK})`;
+    support.layout(fitK, top);
+  };
+  addEventListener('resize', fit); fit();
+
+  // ---------- Cards ----------
+  const cardsEl = $('cards');
+  const cards = ITEMS.map((it, i) => {
+    const el = document.createElement('div');
+    el.className = 'card';
+    const img = new Image();
+    img.src = it.src; img.alt = '';
+    if (it.crop) Object.assign(img.style, { width: it.crop.w + '%', height: it.crop.h + '%', left: it.crop.l + '%', top: it.crop.t + '%' });
+    else img.className = 'cover';
+    el.appendChild(img);
+    el.appendChild(Object.assign(document.createElement('i'), { className: 'hz' }));
+    cardsEl.appendChild(el);
+    support.bindCard(el, i);
+    return { el, i, pos: i, pose: pose(POSES[i]), tween: null, born: 0, ph: i * 1.9 };
+  });
+
+  // ---------- Global looks, eased so switching never jumps ----------
+  let motion = 'turn', depth = true;
+  let rotMix = 1, blurMix = 0;
+
+  function place(c, t) {
+    let p = pose(POSES[c.pos]), z = zAt(c.pos), lift = 0;
+    if (c.tween) {
+      const tw = c.tween;
+      const u = clamp01((t - tw.start) / tw.dur);
+      const e = (tw.ease || ease)(u);
+      p = mix(tw.from, tw.to, e);
+      // A soft bow on longer moves, so cards don't run on rails
+      if (tw.bow) p.cy += Math.sin(Math.PI * e) * tw.bow;
+      lift = Math.sin(Math.PI * u) * (tw.lift || 0);
+      z = tw.z ?? z;
+      if (u >= 1) {
+        c.tween = null;
+        // A card that left the front lands out of sight at the back, then settles in like on load
+        if (tw.then != null) { c.pos = tw.then; p = pose(POSES[c.pos]); c.born = t; }
+      }
+    }
+    c.pose = p;
+
+    // Gentle float on the cards waiting in line; the front card holds still
+    const f = reduce ? 0 : clamp01((434 - p.w) / (434 - 211));
+    const ts = t / 1000 + c.ph;
+    let cx = p.cx + Math.sin(ts * .52) * 5 * f, cy = p.cy + Math.sin(ts * .41 + 1.3) * 7 * f;
+    let { w } = p;
+    let opacity = p.op;
+    // Load-in / re-entry: rise a little and fade up
+    const b = clamp01((t - c.born) / 2000), be = 1 - Math.pow(1 - b, 3);
+    cy += (1 - be) * 24;
+    opacity *= be;
+    let rot = p.rot * rotMix, veil = p.veil, blur = p.blur * blurMix + p.fblur, hz = p.hz;
+
+    // Scroll hand-off into the support row: straighten, unveil and settle
+    const B = support.blend(c.i, { x: cx - w / 2, y: cy - w * AR / 2, w }, opacity);
+    let sha = 1;
+    if (B.e > 0) {
+      cx = B.r.x + B.r.w / 2; cy = B.r.y + B.r.w * AR / 2; w = B.r.w;
+      opacity = B.opacity; rot *= 1 - B.e; veil *= 1 - B.e; hz *= 1 - B.e; blur *= 1 - B.e; lift *= 1 - B.e;
+      sha = 1 - .7 * B.e;
+      if (B.e > .5) z = B.z;
+    }
+    const k = w / BASE_W;
+    c.el.style.transform = `translate(${cx}px, ${cy}px) perspective(1500px) rotateY(${rot}deg) scale(${k}) translate(${-BASE_W / 2}px, ${-BASE_H / 2}px)`;
+    c.el.style.borderRadius = `${10 / k}px`;
+    c.el.style.opacity = opacity;
+    c.el.style.zIndex = Math.round(z);
+    c.el.style.filter = blur > .05 ? `blur(${(blur / k).toFixed(2)}px)` : '';
+    c.el.style.setProperty('--veil', veil.toFixed(3));
+    c.el.style.setProperty('--hz', hz.toFixed(3));
+    c.el.style.setProperty('--lift', lift.toFixed(3));
+    c.el.style.setProperty('--sh', (1 / Math.sqrt(k)).toFixed(3));
+    c.el.style.setProperty('--sha', sha.toFixed(3));
+  }
+
+  // ---------- Follow-up lines, split by letter ----------
+  const follow = $('follow');
+  function makeLine(text) {
+    const el = document.createElement('span');
+    el.className = 'line';
+    el.setAttribute('aria-label', 'to ' + text);
+    el.innerHTML = '<span class="spacer" aria-hidden="true">to </span>';
+    let i = 0;
+    text.split(' ').forEach((word, wi) => {
+      if (wi) el.appendChild(document.createTextNode(' '));
+      const w = document.createElement('span');
+      w.className = 'w'; w.setAttribute('aria-hidden', 'true');
+      for (const ch of word) {
+        const s = document.createElement('span');
+        s.className = 'ch'; s.textContent = ch; s.style.setProperty('--i', i++);
+        w.appendChild(s);
+      }
+      el.appendChild(w);
+    });
+    follow.appendChild(el);
+    return el;
+  }
+  let lineEl = null;
+  function showLine(text, outAt, inAfter) {
+    const old = lineEl;
+    const el = makeLine(text);
+    lineEl = el;
+    if (document.body.classList.contains('frozen')) { old?.remove(); el.classList.add('in'); return; }
+    setTimeout(() => {
+      if (old) { old.classList.remove('in'); old.classList.add('out'); setTimeout(() => old.remove(), 2000); }
+      setTimeout(() => requestAnimationFrame(() => el.classList.add('in')), inAfter);
+    }, outAt);
+  }
+
+  // ---------- Arrival styles ----------
+  // Every style moves the waiting cards one place forward (turning to face you as they reach the front).
+  // What differs is how the front card leaves, and the timing. exit = the pose it leaves toward.
+  const front = POSES[0];
+  const MOTIONS = {
+    turn: {
+      label: 'Turn',
+      note: 'The front photo swings away like a turning card; the next one rotates round to face you.',
+      exit: { pose: pose(front, { cx: 720, cy: 418, w: 380, rot: -70, veil: .25, op: 0 }), dur: 2600, z: 12, lift: .6 },
+      advanceAt: 350, textOut: 1500, textIn: 800,
+    },
+    lift: {
+      label: 'Lift',
+      note: 'The front photo lifts toward you and dissolves, uncovering the line as it steps forward.',
+      exit: { pose: pose(front, { cy: 390, w: 490, op: 0, fblur: 10 }), dur: 1900, z: 12, ease: easeOut },
+      advanceAt: 250, textOut: 900, textIn: 800,
+    },
+    focus: {
+      label: 'Focus',
+      note: 'Depth of field: the line sits out of focus and sharpens as each photo reaches the front. The old one sinks back behind it.',
+      exit: { pose: pose(front, { cx: 1120, w: 230, rot: 24, veil: .85, op: 0, fblur: 6 }), dur: 2700, z: 1 },
+      advanceAt: 450, textOut: 1600, textIn: 800,
+    },
+    rise: {
+      label: 'Rise',
+      note: 'Buoyant: the front photo drifts up and away while the line floats forward beneath it.',
+      exit: { pose: pose(front, { cy: 290, op: 0 }), dur: 2400, z: 12, ease: easeSine },
+      advanceAt: 300, textOut: 1100, textIn: 800,
+    },
+  };
+  const ADVANCE = 3000;
+  const HOLD = 5200;
+  let cur = 0, next = 0, swapUntil = 0, paused = false;
+
+  // Bring card i to the front: everything ahead of it leaves in the current style, the rest step forward
+  function go(i, t) {
+    if (i === cur || t < swapUntil) return;
+    const m = MOTIONS[motion];
+    const s = cards[i].pos;
+    for (const c of cards) {
+      const to = (c.pos - s + cards.length) % cards.length;
+      if (c.pos < s) {
+        const ex = m.exit;
+        c.tween = { from: c.pose, to: ex.pose, start: t + (s - 1 - c.pos) * 120, dur: ex.dur, z: ex.z, lift: ex.lift, ease: ex.ease, then: to };
+      } else {
+        const d = c.pos - s;   // 0 = new front card
+        c.tween = { from: c.pose, to: pose(POSES[to]), start: t + m.advanceAt + d * 140, dur: ADVANCE,
+          z: zAt(to), lift: to === 0 ? .8 : .2, bow: to === 0 ? -10 : 0 };
+        c.pos = to;
+      }
+    }
+    swapUntil = t + Math.max(m.exit.dur, m.advanceAt + 3 * 140 + ADVANCE) + 100;
+    cur = i;
+    showLine(ITEMS[i].line, reduce ? 0 : m.textOut, reduce ? 0 : m.textIn);
+    next = t + HOLD;
+    syncUi();
+  }
+
+  // ---------- Controls ----------
+  const ctrl = $('ctrl'), pauseBtn = $('pause');
+  const dots = ITEMS.map((it, i) => {
+    const b = document.createElement('button');
+    b.className = 'dot'; b.setAttribute('aria-label', 'to ' + it.line);
+    b.addEventListener('click', () => go(i, performance.now()));
+    ctrl.insertBefore(b, pauseBtn);
+    return b;
+  });
+  const ICON_PAUSE = '<svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><rect x="2" y="1" width="2.6" height="10" rx="1"/><rect x="7.4" y="1" width="2.6" height="10" rx="1"/></svg>';
+  const ICON_PLAY  = '<svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M3 1.4v9.2a.6.6 0 0 0 .9.5l7.4-4.6a.6.6 0 0 0 0-1L3.9.9a.6.6 0 0 0-.9.5z"/></svg>';
+  function syncUi() {
+    dots.forEach((d, i) => d.setAttribute('aria-current', i === cur));
+    pauseBtn.innerHTML = paused ? ICON_PLAY : ICON_PAUSE;
+    pauseBtn.setAttribute('aria-label', paused ? 'Play' : 'Pause');
+  }
+  pauseBtn.addEventListener('click', () => { paused = !paused; if (!paused) next = performance.now() + 1200; syncUi(); });
+  addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight') go((cur + 1) % ITEMS.length, performance.now());
+    if (e.key === 'ArrowLeft') go((cur + ITEMS.length - 1) % ITEMS.length, performance.now());
+    if (e.key === ' ') { e.preventDefault(); pauseBtn.click(); }
+  });
+
+  // Arrival + depth picker (remembered per viewer)
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch {} },
+  };
+  const mParam = params.get('m');
+  motion = MOTIONS[mParam] ? mParam : MOTIONS[store.get('stack-motion')] ? store.get('stack-motion') : 'turn';
+  depth = (params.get('d') || store.get('stack-depth')) !== 'flat';
+  rotMix = depth ? 1 : 0;
+  blurMix = motion === 'focus' ? 1 : 0;
+
+  const mNav = document.createElement('nav');
+  mNav.className = 'switcher switcher--motion';
+  mNav.setAttribute('aria-label', 'Arrival style');
+  mNav.innerHTML = '<span class="switcher-label">Arrival</span>' +
+    Object.entries(MOTIONS).map(([id, m]) => `<button type="button" data-m="${id}" aria-pressed="${id === motion}">${m.label}</button>`).join('') +
+    '<span class="switcher-sep" aria-hidden="true"></span><span class="switcher-label">Depth</span>' +
+    `<button type="button" data-d="3d" aria-pressed="${depth}">3D</button><button type="button" data-d="flat" aria-pressed="${!depth}">Flat</button>` +
+    `<span class="motion-note" id="motion-note">${MOTIONS[motion].note}</span>`;
+  function setParam(k, v) {
+    const q = new URLSearchParams(location.search); q.set(k, v); q.delete('t');
+    history.replaceState(null, '', '?' + q.toString());
+  }
+  mNav.addEventListener('click', e => {
+    const b = e.target.closest('[data-m], [data-d]');
+    if (!b) return;
+    if (b.dataset.m && b.dataset.m !== motion) {
+      motion = b.dataset.m; store.set('stack-motion', motion); setParam('m', motion);
+      $('motion-note').textContent = MOTIONS[motion].note;
+      next = Math.min(next, performance.now() + 900);    // show the new style straight away
+    }
+    if (b.dataset.d) { depth = b.dataset.d === '3d'; store.set('stack-depth', b.dataset.d); setParam('d', b.dataset.d); }
+    mNav.querySelectorAll('[data-m]').forEach(x => x.setAttribute('aria-pressed', x.dataset.m === motion));
+    mNav.querySelectorAll('[data-d]').forEach(x => x.setAttribute('aria-pressed', (x.dataset.d === '3d') === depth));
+  });
+  document.body.appendChild(mNav);
+
+  // ---------- Run ----------
+  const t0 = performance.now();
+  cards.forEach(c => { c.born = t0 + 200 + c.pos * 240; });
+  requestAnimationFrame(() => document.body.classList.remove('intro'));
+  showLine(ITEMS[0].line, 0, 900);
+  next = t0 + 2800;
+  syncUi();
+
+  let sp = 0;
+  function step(t) {
+    if (!paused && t >= next) go((cur + 1) % ITEMS.length, t);
+    if (paused) next = Math.max(next, t + 1200);
+    sp += (scrollY - sp) * (jump !== null ? 1 : .07);
+    support.update(sp, forcedP);
+    if (support.p > .02) next = Math.max(next, t + 1500);
+    const fr = jump !== null ? 1 : .05;
+    rotMix += ((depth ? 1 : 0) - rotMix) * fr;
+    blurMix += ((motion === 'focus' ? 1 : 0) - blurMix) * fr;
+    cards.forEach(c => place(c, t));
+  }
+
+  if (jump !== null) {
+    for (let t = t0; t <= t0 + +jump; t += 16) step(t);
+    return;
+  }
+  const frame = t => { step(t); requestAnimationFrame(frame); };
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

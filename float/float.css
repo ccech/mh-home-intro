@@ -1,0 +1,146 @@
+/* Float concept — shared styles for float/index.html (Float) and float/build.html (Build).
+   Colourways are token sets on <html data-colorway="…">, swapped live by chrome.js. */
+
+@font-face { font-family: 'Lora'; font-weight: 400; font-display: swap; src: url('../fonts/lora-400.ttf') format('truetype'); }
+@font-face { font-family: 'Montserrat'; font-weight: 400; font-display: swap; src: url('../fonts/montserrat-400.ttf') format('truetype'); }
+@font-face { font-family: 'Montserrat'; font-weight: 500; font-display: swap; src: url('../fonts/montserrat-500.ttf') format('truetype'); }
+
+/* Neutral — Figma 4011:1190 + 4012:1227 */
+:root, [data-colorway="neutral"] {
+  --page: #F6EFE8;
+  --hero-bg: linear-gradient(106.77deg, #FDF9F7 0.88%, #F6EFE8 100%);
+  --support-bg: linear-gradient(109.89deg, #FDF9F7 0.88%, #F6EFE8 100%);
+  --ink: #4B4742;
+  --label: #000000;
+  --accent: #005399;
+  --on-accent: #FFFFFF;
+  --rule: #B9B9B9;
+  --shadow-rgb: 64, 50, 38;
+  --shadow-a1: .26;
+  --shadow-a2: .10;
+  --hero-dim: 1;                 /* supporting photos' opacity in the hero */
+  --muted: rgba(75, 71, 66, .35);
+  --dot-off: rgba(75, 71, 66, .22);
+}
+/* Navy — Figma 4013:1261 + 4013:1275. The space above the module mirrors the hero gradient so the two meet without a seam. */
+[data-colorway="navy"] {
+  --page: #012346;
+  --hero-bg: linear-gradient(134.98deg, rgba(6, 89, 152, 0) 31.95%, #065998 100%), #012346;
+  --support-bg:
+    linear-gradient(180deg, rgba(1, 35, 70, 0) 0, #012346 70vh) top / 100% 100vh no-repeat,
+    linear-gradient(45deg, rgba(6, 89, 152, 0) 31.95%, #065998 100%) top / 100% 100vh no-repeat,
+    #012346;
+  --ink: #FAF4EE;
+  --label: #FAF4EE;
+  --accent: #B3D4FB;
+  --on-accent: #012346;
+  --rule: #B9B9B9;
+  --shadow-rgb: 0, 8, 22;
+  --shadow-a1: .5;
+  --shadow-a2: .25;
+  --hero-dim: .4;
+  --muted: rgba(250, 244, 238, .35);
+  --dot-off: rgba(250, 244, 238, .28);
+}
+/* Sky — Figma 4013:1294 + 4013:1304 */
+[data-colorway="sky"] {
+  --page: #DFEEFF;
+  --hero-bg: linear-gradient(103.48deg, rgba(255, 251, 232, 0) 12.8%, #FFFBE8 103.91%), #DFEEFF;
+  --support-bg: linear-gradient(106.06deg, rgba(255, 251, 232, 0) 12.8%, #FFFBE8 103.91%), #DFEEFF;
+  --ink: #4B4742;
+  --label: #4B4742;
+  --accent: #0069BF;
+  --on-accent: #FFFFFF;
+  --rule: #B9B9B9;
+  --shadow-rgb: 28, 56, 96;
+  --shadow-a1: .22;
+  --shadow-a2: .08;
+  --hero-dim: .4;
+  --muted: rgba(75, 71, 66, .35);
+  --dot-off: rgba(75, 71, 66, .22);
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--page); }
+body { overflow-x: hidden; font-family: 'Montserrat', sans-serif; -webkit-font-smoothing: antialiased; }
+
+/* Hero fills the first screen; a placeholder section below the module gives room to scroll on */
+.hero { position: relative; height: 100vh; min-height: 560px; background: var(--hero-bg); }
+.next { position: relative; height: 75vh; display: grid; place-items: center; background: var(--page); }
+.next span { font: 500 12px/1 'Montserrat', sans-serif; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+
+.stage { position: absolute; left: 50%; top: 50%; width: 1440px; height: 814px; transform-origin: 0 0; overflow: visible; z-index: 3; }
+/* One page-level photo layer (hero stage units) so photos can travel from the hero into the module */
+.photos { position: absolute; left: 0; top: 0; width: 1440px; height: 814px; transform-origin: 0 0; z-index: 2; }
+
+.hl, .follow, .copy, .btn { z-index: 5; }
+.hl, .follow { position: absolute; top: 275px; margin: 0; font: 400 61px/1.2 'Lora', serif; letter-spacing: -1.22px; color: var(--ink); }
+.hl { left: 25px; width: 491px; text-align: right; }
+.follow { left: 916px; width: 490px; height: 146px; font-style: italic; }
+.follow .to { position: absolute; left: 0; top: 0; }
+.line { position: absolute; inset: 0; text-wrap: balance; }   /* even lines, no single-word widows */
+.line .spacer { visibility: hidden; }
+.w { display: inline-block; white-space: nowrap; }
+.ch {
+  display: inline-block; opacity: 0; transform: translateY(.42em); filter: blur(6px);
+  transition: opacity 1.1s ease, transform 1.5s cubic-bezier(.2,.7,.25,1), filter 1.2s ease;
+  transition-delay: calc(var(--i) * 42ms);
+}
+.line.in .ch { opacity: 1; transform: none; filter: blur(0); }
+.line.out .ch {
+  opacity: 0; transform: translateY(-.32em); filter: blur(5px);
+  transition-duration: .9s, 1.1s, .9s; transition-timing-function: ease, cubic-bezier(.45,0,.55,1), ease;
+  transition-delay: calc(var(--i) * 16ms);
+}
+
+.copy { position: absolute; left: 453px; top: 597px; width: 534px; margin: 0; text-align: center; font: 500 18.4px/1.5 'Montserrat', sans-serif; color: var(--ink); }
+.btn {
+  position: absolute; left: 50%; top: 710px; transform: translateX(-50%); padding: 16px 28px; border-radius: 999px;
+  background: var(--accent); color: var(--on-accent); font: 600 16px/normal 'Montserrat', sans-serif; text-decoration: none; white-space: nowrap;
+}
+.intro .copy, .intro .btn, .intro .hl { opacity: 0; }
+.copy, .btn, .hl { transition: opacity 1.6s ease .3s; }
+
+/* Every card is laid out at main-photo size and placed with translate + scale;
+   all the Figma frames share the ~0.703 aspect, so one box fits every slot. */
+.card {
+  position: absolute; left: 0; top: 0; width: 310px; height: 441px; overflow: hidden; border-radius: 10px;
+  transform-origin: 0 0; will-change: transform;
+  /* Soft, wide shadow for depth. --sh undoes most of the card's scale so small photos keep a fluffy shadow too */
+  box-shadow:
+    0 calc(var(--sh, 1) * (26px + var(--lift, 0) * 16px)) calc(var(--sh, 1) * (64px + var(--lift, 0) * 26px)) calc(var(--sh, 1) * -12px) rgba(var(--shadow-rgb), calc(var(--shadow-a1) * var(--sha, 1))),
+    0 calc(var(--sh, 1) * 8px) calc(var(--sh, 1) * 20px) calc(var(--sh, 1) * -8px) rgba(var(--shadow-rgb), calc(var(--shadow-a2) * var(--sha, 1)));
+}
+.card img { position: absolute; display: block; max-width: none; }
+.card img.cover { inset: 0; width: 100%; height: 100%; object-fit: cover; }
+
+.frozen .ch, .frozen .copy, .frozen .btn, .frozen .hl, .frozen .s-rv, .frozen .s-rule { transition: none !important; }
+.frozen .line.in .ch { opacity: 1; transform: none; filter: none; }
+
+/* Line controls */
+.ctrl { position: fixed; right: 24px; bottom: 22px; display: flex; align-items: center; gap: 10px; z-index: 20; }
+.ctrl button { border: 0; background: none; padding: 0; cursor: pointer; }
+.ctrl .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--dot-off); transition: background .6s, transform .6s; }
+.ctrl .dot[aria-current="true"] { background: var(--ink); transform: scale(1.15); }
+.ctrl .pause { width: 28px; height: 28px; border-radius: 50%; color: var(--ink); opacity: .55; display: grid; place-items: center; transition: opacity .3s; }
+.ctrl .pause:hover { opacity: 1; }
+.ctrl button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+/* Prototype chrome: concept + colourway picker (top-left) and scroll mode (bottom-left) */
+.switcher {
+  position: fixed; left: 16px; top: 16px; z-index: 20; display: flex; align-items: center; gap: 4px; padding: 4px;
+  background: rgba(6, 36, 59, .55); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-radius: 999px;
+  opacity: .5; transition: opacity .4s;
+}
+.switcher:hover, .switcher:focus-within { opacity: 1; }
+.switcher a, .switcher button {
+  font: 500 12px/1 'Montserrat', sans-serif; color: rgba(255, 255, 255, .8); text-decoration: none;
+  padding: 8px 12px; border-radius: 999px; border: 0; background: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+}
+.switcher [aria-current="page"], .switcher [aria-pressed="true"] { background: #FFFFFF; color: #06243B; }
+.switcher a:hover:not([aria-current]), .switcher button:hover:not([aria-pressed="true"]) { color: #FFFFFF; }
+.switcher a:focus-visible, .switcher button:focus-visible { outline: 2px solid #B3D4FB; outline-offset: 1px; }
+.switcher-label { font: 500 11px/1 'Montserrat', sans-serif; letter-spacing: .1em; text-transform: uppercase; color: rgba(255, 255, 255, .6); padding: 0 6px 0 10px; }
+.switcher-sep { width: 1px; height: 18px; background: rgba(255, 255, 255, .25); margin: 0 6px; }
+.swatch { width: 10px; height: 10px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .5); }
+.switcher--mode { top: auto; bottom: 16px; }
