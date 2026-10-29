@@ -31,7 +31,7 @@
 /* Navy — Figma 4013:1261 + 4013:1275. The space above the module mirrors the hero gradient so the two meet without a seam. */
 [data-colorway="navy"], [data-colorway="navy-solid"] {
   --page: #012346;
-  --hero-bg: linear-gradient(134.98deg, rgba(6, 89, 152, 0) 31.95%, #065998 100%), #012346;
+  --hero-bg: linear-gradient(138.18deg, rgba(6, 89, 152, 0) 31.95%, #065998 100%), #012346;
   --support-bg:
     linear-gradient(180deg, rgba(1, 35, 70, 0) 0, #012346 70vh) top / 100% 100vh no-repeat,
     linear-gradient(45deg, rgba(6, 89, 152, 0) 31.95%, #065998 100%) top / 100% 100vh no-repeat,
@@ -51,7 +51,7 @@
   --haze-rgb: 6, 89, 152;
   --hero-rule: #FFFFFF;
   --follow: #B3D4FB;
-  --frame-from: #FFFFFF;
+  --frame-from: rgba(255, 255, 255, .52);
   --frame-to: rgba(179, 212, 251, .12);
 }
 /* Navy Solid: the Navy colourway on a flat #012346 background (no blue glow) */
@@ -173,32 +173,31 @@ body { overflow-x: hidden; font-family: 'Montserrat', sans-serif; -webkit-font-s
 .switcher--motion { top: 60px; flex-wrap: wrap; max-width: calc(100vw - 32px); border-radius: 22px; }
 .motion-note { font: 500 12px/1.35 'Montserrat', sans-serif; color: rgba(255, 255, 255, .78); padding: 0 12px 0 8px; max-width: 300px; }
 
-/* ---------- Stack layout ---------- */
-.hl { left: 81px; top: 98px; width: 464px; text-align: left; font-size: 59px; letter-spacing: -1.18px; }
+/* ---------- Stack layout (Figma 4021:1384 / 4021:1397) ---------- */
+.stage, .photos { height: 728px; }
+.hl { left: 81px; top: 102px; width: 464px; text-align: left; font-size: 59px; letter-spacing: -1.18px; }
 /* Comp sets the follow line at 376px; widened to the column (464px) so the longer lines still fit on two lines */
-.follow { left: 81px; top: 339px; width: 464px; font-size: 59px; letter-spacing: -1.18px; color: var(--follow); }
-.copy { left: 81px; top: 548px; width: 464px; text-align: left; font: 400 16px/1.6 'Montserrat', sans-serif; }
-.btns { position: absolute; left: 81px; top: 661px; display: flex; gap: 18px; z-index: 5; }
-.btns .btn { position: static; transform: none; }
-.btn--ghost { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--ink); }
+.follow { left: 81px; top: 244px; width: 464px; font-size: 59px; letter-spacing: -1.18px; color: var(--follow); }
+.copy { left: 81px; top: 463px; width: 464px; text-align: left; font: 400 16px/1.6 'Montserrat', sans-serif; }
+.btns { position: absolute; left: 81px; top: 576px; display: flex; gap: 15px; z-index: 5; }
+.btns .btn { position: static; transform: none; font-size: 12.94px; padding: 12.94px 22.64px; }
+.btn--ghost { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1.21px var(--ink); }
 .intro .btns { opacity: 0; }
 .btns { transition: opacity 1.6s ease .3s; }
-/* Short vertical divider between the headline and the follow line */
-.rule { position: absolute; left: 89px; top: 257px; width: 1px; height: 68px; background: var(--hero-rule); z-index: 5; transform-origin: 50% 0; transition: transform 1.2s cubic-bezier(.3,.7,.2,1) .5s; }
-.intro .rule { transform: scaleY(0); }
-/* Thin rounded frame around the hero (Figma 4018:1382); it sits above the photos, as in the comp */
+/* Thin rounded frame around the hero; it sits above the photos, as in the comp. Pill version rounds a little more. */
 .frame {
-  position: absolute; left: 32px; top: 32px; width: 1376px; height: 750px; border-radius: 17px; z-index: 6; pointer-events: none;
-  /* 1px gradient stroke (Figma: white → #B3D4FB at 12%, top-left to bottom-right), drawn as a masked border ring */
-  padding: 1px; background: linear-gradient(114deg, var(--frame-from) -2%, var(--frame-to) 99%);
+  position: absolute; left: 32px; top: 32px; width: 1376px; height: 660px; border-radius: 12px; z-index: 6; pointer-events: none;
+  /* 1px gradient stroke (Figma: white 52% → #B3D4FB 12%, top-left to bottom-right), drawn as a masked border ring */
+  padding: 1px; background: linear-gradient(111deg, var(--frame-from) -2%, var(--frame-to) 99%);
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
           mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
-  transition: opacity 1.6s ease .2s;
+  transition: opacity 1.6s ease .2s, border-radius .8s ease;
 }
+[data-shape="pill"] .frame { border-radius: 17px; }
 .intro .frame { opacity: 0; }
 /* Cards turn in 3D around their own centre; the shade veil fades a card back into the page as it recedes */
 .card::after { content: ''; position: absolute; inset: 0; background: var(--shade); opacity: var(--veil, 0); pointer-events: none; }
-.frozen .rule, .frozen .btns, .frozen .frame { transition: none !important; }
+.frozen .btns, .frozen .frame { transition: none !important; }
 
 /* Haze: the hero gradient's light corner, rising from the bottom-right across each waiting photo.
    It lives on every card (strength --hz from its place in the line), so a photo sheds it gradually as it comes forward. */

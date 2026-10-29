@@ -7,15 +7,14 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@1,400&family=Montserrat:wght@600&display=swap">
-<link rel="stylesheet" href="stack.css?v=202610281713">
-<script src="chrome.js?v=202610281713"></script>
+<link rel="stylesheet" href="stack.css?v=202610282216">
+<script src="chrome.js?v=202610282216"></script>
 </head>
 <body class="intro">
 <section class="hero">
 <div class="stage" id="stage">
   <div class="frame" aria-hidden="true"></div>
   <h1 class="hl">Mental health care that adapts</h1>
-  <div class="rule" aria-hidden="true"></div>
   <p class="follow" id="follow" aria-live="polite"><span class="to">to</span></p>
   <p class="copy">One global mental health benefit connecting employees to coaching, therapy, and more, with clinical guidance to help them find support that fits their needs.</p>
   <div class="btns"><a class="btn" href="#">Talk to our team</a><a class="btn btn--ghost" href="#">How it works</a></div>
@@ -28,11 +27,12 @@
   <button class="pause" id="pause" aria-label="Pause"></button>
 </div>
 
-<script src="support.js?v=202610281713"></script>
+<script src="support.js?v=202610282216"></script>
 <script>
 (() => {
   const $ = id => document.getElementById(id);
-  const W = 1440, H = 814, BASE_W = 310, BASE_H = 441, AR = BASE_H / BASE_W;
+  const W = 1440, H = 728, BASE_W = 310, BASE_H = 441, AR = BASE_H / BASE_W;   // AR = card shape (also the support row's)
+  const AR_PILL = 512 / 313;   // pill crop is taller
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const params = new URLSearchParams(location.search);
   // ?t=ms freezes the sequence at that moment; ?vh=814 fixes the hero height; ?p=0..1 forces the scroll hand-off
@@ -47,31 +47,47 @@
   const lerp = (a, b, u) => a + (b - a) * u;
   const clamp01 = u => Math.max(0, Math.min(1, u));
 
-  // ---------- The stack (Figma 4015:1327) ----------
-  // Five resting poses along a line that recedes to the right (Figma 4015:1327, revised). Position 0 is the main photo; 1 and 2 are the
-  // two in the comp (veiled to 51% like the design); 3 waits just off the right edge; 4 is out of sight.
+  // ---------- The stack (Figma 4021:1384 card / 4021:1397 pill) ----------
+  // Five resting poses along a line that recedes to the right. Position 0 is the main photo; 1 and 2 are the
+  // two in the comp (veiled to 51% like the design); 3 and 4 wait out of sight behind them.
   // rot = turn away from the viewer (deg), veil = fade toward the background, blur = depth of field (Focus only),
-  // hz = haze from the hero's light corner washing over the photo.
-  const POSES = [
-    { cx: 636 + 217,    cy: 407, w: 434, rot: 0,  veil: 0,   blur: 0, op: 1, hz: 0 },
-    { cx: 1001 + 153.5, cy: 407, w: 307, rot: 20, veil: .49, blur: 3, op: 1, hz: .7 },
-    { cx: 1254 + 105.5, cy: 407, w: 211, rot: 32, veil: .49, blur: 5, op: 1, hz: .9 },
-    { cx: 1480,         cy: 407, w: 156, rot: 42, veil: .65, blur: 7, op: 1, hz: 1 },
-    { cx: 1570,         cy: 407, w: 120, rot: 48, veil: .8,  blur: 8, op: 0, hz: 1 },
+  // hz = haze from the hero's light corner washing over the photo. Card and pill crops have their own sizes and
+  // spacing; the Shape picker blends between the two sets.
+  const LOOK = [
+    { rot: 0,  veil: 0,   blur: 0, op: 1, hz: 0 },
+    { rot: 20, veil: .49, blur: 3, op: 1, hz: .7 },
+    { rot: 32, veil: .49, blur: 5, op: 1, hz: .9 },
+    { rot: 42, veil: .65, blur: 7, op: 0, hz: 1 },   // hidden: the comp shows three; it fades in as it steps forward
+    { rot: 48, veil: .8,  blur: 8, op: 0, hz: 1 },
   ];
+  const CY = H / 2;
+  const SPOTS_CARD = [{ cx: 673 + 180.5, w: 361 }, { cx: 1006 + 127.5, w: 255 }, { cx: 1229 + 89.5, w: 179 }, { cx: 1470, w: 132 }, { cx: 1560, w: 100 }];
+  const SPOTS_PILL = [{ cx: 806.5, w: 313 },       { cx: 1060.5, w: 245 },       { cx: 1262.3, w: 188.6 },     { cx: 1425, w: 150 }, { cx: 1525, w: 118 }];
+  let shapeMix = 0;   // 0 = card, 1 = pill (eased)
+  const getPose = k => Object.assign({ fblur: 0, cy: CY,
+    cx: lerp(SPOTS_CARD[k].cx, SPOTS_PILL[k].cx, shapeMix), w: lerp(SPOTS_CARD[k].w, SPOTS_PILL[k].w, shapeMix) }, LOOK[k]);
   const zAt = pos => 10 - pos;
   const KEYS = ['cx', 'cy', 'w', 'rot', 'veil', 'blur', 'op', 'fblur', 'hz'];
   const pose = (p, extra) => Object.assign({ fblur: 0 }, p, extra);
   const mix = (a, b, u) => { const o = {}; for (const k of KEYS) o[k] = lerp(a[k] ?? 0, b[k] ?? 0, u); return o; };
 
   // ---------- Lines + photos, in stack order ----------
+  // ia = image aspect (w/h); card/pill = { z: zoom over "cover", fx/fy: focal point 0–1 }, taken from the Figma crops
   const ITEMS = [
-    { line: 'your whole workforce',   src: '../assets/float/commuter.jpg',    crop: { w: 247.12, h: 116.05, l: -75.54, t: -13.45 } },
-    { line: 'global complexity',      src: '../assets/float/bearded-man.jpg' },
-    { line: 'your clients’ needs',    src: '../assets/float/curly-woman.jpg', crop: { w: 213.33, h: 100, l: -35.37, t: 0 } },
-    { line: 'each employee’s needs',  src: '../assets/float/couch-woman.jpg', crop: { w: 254.65, h: 119.67, l: -115.91, t: -0.77 } },
-    { line: 'your business strategy', src: '../assets/float/laptop-man.jpg' },
+    { line: 'your whole workforce',   src: '../assets/float/commuter.jpg',    ia: 1.5,    card: { z: 1.16, fx: .513, fy: .84 }, pill: { z: 1.118, fx: .51, fy: .96 } },
+    { line: 'global complexity',      src: '../assets/float/bearded-man.jpg', ia: .6667,  card: { z: 1, fx: .5, fy: .5 },        pill: { z: 1, fx: .46, fy: .5 } },
+    { line: 'your clients’ needs',    src: '../assets/float/curly-woman.jpg', ia: 1.5075, card: { z: 1, fx: .312, fy: .5 },      pill: { z: 1, fx: .312, fy: .5 } },
+    { line: 'each employee’s needs',  src: '../assets/float/couch-woman.jpg', ia: 1.5,    card: { z: 1.197, fx: .75, fy: .04 }, pill: { z: 1.197, fx: .75, fy: .04 } },
+    { line: 'your business strategy', src: '../assets/float/laptop-man.jpg',  ia: .6667,  card: { z: 1, fx: .5, fy: .5 },        pill: { z: 1, fx: .5, fy: .5 } },
   ];
+  // Size + offset the photo inside a box of aspect ba (w/h), as % of the box
+  function frameImg(img, it, ba, s) {
+    const z = lerp(it.card.z, it.pill.z, s), fx = lerp(it.card.fx, it.pill.fx, s), fy = lerp(it.card.fy, it.pill.fy, s);
+    let w, h;
+    if (it.ia > ba) { h = 100 * z; w = 100 * z * it.ia / ba; } else { w = 100 * z; h = 100 * z * ba / it.ia; }
+    img.style.width = w.toFixed(2) + '%'; img.style.height = h.toFixed(2) + '%';
+    img.style.left = (-(w - 100) * fx).toFixed(2) + '%'; img.style.top = (-(h - 100) * fy).toFixed(2) + '%';
+  }
 
   // ---------- Stage fit + support module ----------
   const stage = $('stage'), photos = $('photos');
@@ -95,13 +111,11 @@
     el.className = 'card';
     const img = new Image();
     img.src = it.src; img.alt = '';
-    if (it.crop) Object.assign(img.style, { width: it.crop.w + '%', height: it.crop.h + '%', left: it.crop.l + '%', top: it.crop.t + '%' });
-    else img.className = 'cover';
     el.appendChild(img);
     el.appendChild(Object.assign(document.createElement('i'), { className: 'hz' }));
     cardsEl.appendChild(el);
     support.bindCard(el, i);
-    return { el, i, pos: i, pose: pose(POSES[i]), tween: null, born: 0, ph: i * 1.9 };
+    return { el, img, it, i, pos: i, pose: getPose(i), tween: null, born: 0, ph: i * 1.9 };
   });
 
   // ---------- Global looks, eased so switching never jumps ----------
@@ -109,12 +123,12 @@
   let rotMix = 1, blurMix = 0;
 
   function place(c, t) {
-    let p = pose(POSES[c.pos]), z = zAt(c.pos), lift = 0;
+    let p = getPose(c.pos), z = zAt(c.pos), lift = 0;
     if (c.tween) {
       const tw = c.tween;
       const u = clamp01((t - tw.start) / tw.dur);
       const e = (tw.ease || ease)(u);
-      p = mix(tw.from, tw.to, e);
+      p = mix(tw.from, tw.toIdx != null ? getPose(tw.toIdx) : tw.to, e);
       // A soft bow on longer moves, so cards don't run on rails
       if (tw.bow) p.cy += Math.sin(Math.PI * e) * tw.bow;
       lift = Math.sin(Math.PI * u) * (tw.lift || 0);
@@ -122,13 +136,13 @@
       if (u >= 1) {
         c.tween = null;
         // A card that left the front lands out of sight at the back, then settles in like on load
-        if (tw.then != null) { c.pos = tw.then; p = pose(POSES[c.pos]); c.born = t; }
+        if (tw.then != null) { c.pos = tw.then; p = getPose(c.pos); c.born = t; }
       }
     }
     c.pose = p;
 
     // Gentle float on the cards waiting in line; the front card holds still
-    const f = reduce ? 0 : clamp01((434 - p.w) / (434 - 211));
+    const f = reduce ? 0 : clamp01((getPose(0).w - p.w) / (getPose(0).w - getPose(2).w));
     const ts = t / 1000 + c.ph;
     let cx = p.cx + Math.sin(ts * .52) * 5 * f, cy = p.cy + Math.sin(ts * .41 + 1.3) * 7 * f;
     let { w } = p;
@@ -149,8 +163,13 @@
       if (B.e > .5) z = B.z;
     }
     const k = w / BASE_W;
-    c.el.style.transform = `translate(${cx}px, ${cy}px) perspective(1500px) rotateY(${rot}deg) scale(${k}) translate(${-BASE_W / 2}px, ${-BASE_H / 2}px)`;
-    c.el.style.borderRadius = `${10 / k}px`;
+    // Shape: card → pill. Pills turn back into cards as they settle into the (rectangular) support row.
+    const sm = shapeMix * (1 - B.e), ar = lerp(AR, AR_PILL, sm), hLocal = BASE_W * ar;
+    // In pill mode the photo grows taller around the same centre; its width (and spacing) comes from the pose
+    c.el.style.height = `${hLocal.toFixed(2)}px`;
+    c.el.style.transform = `translate(${cx}px, ${cy}px) perspective(1500px) rotateY(${rot}deg) scale(${k}) translate(${-BASE_W / 2}px, ${(-hLocal / 2).toFixed(2)}px)`;
+    c.el.style.borderRadius = `${lerp(8 / k, BASE_W / 2, sm).toFixed(2)}px`;
+    frameImg(c.img, c.it, 1 / ar, sm);
     c.el.style.opacity = opacity;
     c.el.style.zIndex = Math.round(z);
     c.el.style.filter = blur > .05 ? `blur(${(blur / k).toFixed(2)}px)` : '';
@@ -198,31 +217,30 @@
   // ---------- Arrival styles ----------
   // Every style moves the waiting cards one place forward (turning to face you as they reach the front).
   // What differs is how the front card leaves, and the timing. exit = the pose it leaves toward.
-  const front = POSES[0];
   const MOTIONS = {
     turn: {
       label: 'Turn',
       note: 'The front photo swings away like a turning card; the next one rotates round to face you.',
       // A little snappier than the others: quicker swing-away, and the line steps up sooner
-      exit: { pose: pose(front, { cx: 660, cy: 418, w: 380, rot: -70, veil: .25, op: 0 }), dur: 1700, z: 12, lift: .6 },
+      exit: { pose: f => pose(f, { cx: f.cx - 190, cy: f.cy + 10, w: f.w * .88, rot: -70, veil: .25, op: 0 }), dur: 1700, z: 12, lift: .6 },
       advanceAt: 200, advance: 2200, textOut: 900, textIn: 650,
     },
     lift: {
       label: 'Lift',
       note: 'The front photo lifts toward you and dissolves, uncovering the line as it steps forward.',
-      exit: { pose: pose(front, { cy: 390, w: 490, op: 0, fblur: 10 }), dur: 1900, z: 12, ease: easeOut },
+      exit: { pose: f => pose(f, { cy: f.cy - 16, w: f.w * 1.13, op: 0, fblur: 10 }), dur: 1900, z: 12, ease: easeOut },
       advanceAt: 250, textOut: 900, textIn: 800,
     },
     focus: {
       label: 'Focus',
       note: 'Depth of field: the line sits out of focus and sharpens as each photo reaches the front. The old one sinks back behind it.',
-      exit: { pose: pose(front, { cx: 1080, w: 230, rot: 24, veil: .85, op: 0, fblur: 6 }), dur: 2700, z: 1 },
+      exit: { pose: f => pose(f, { cx: f.cx + 230, w: f.w * .55, rot: 24, veil: .85, op: 0, fblur: 6 }), dur: 2700, z: 1 },
       advanceAt: 450, textOut: 1600, textIn: 800,
     },
     rise: {
       label: 'Rise',
       note: 'Buoyant: the front photo drifts up and away while the line floats forward beneath it.',
-      exit: { pose: pose(front, { cy: 290, op: 0 }), dur: 2400, z: 12, ease: easeSine },
+      exit: { pose: f => pose(f, { cy: f.cy - 110, op: 0 }), dur: 2400, z: 12, ease: easeSine },
       advanceAt: 300, textOut: 1100, textIn: 800,
     },
   };
@@ -239,10 +257,10 @@
       const to = (c.pos - s + cards.length) % cards.length;
       if (c.pos < s) {
         const ex = m.exit;
-        c.tween = { from: c.pose, to: ex.pose, start: t + (s - 1 - c.pos) * 120, dur: ex.dur, z: ex.z, lift: ex.lift, ease: ex.ease, then: to };
+        c.tween = { from: c.pose, to: ex.pose(getPose(0)), start: t + (s - 1 - c.pos) * 120, dur: ex.dur, z: ex.z, lift: ex.lift, ease: ex.ease, then: to };
       } else {
         const d = c.pos - s;   // 0 = new front card
-        c.tween = { from: c.pose, to: pose(POSES[to]), start: t + m.advanceAt + d * 140, dur: m.advance || ADVANCE,
+        c.tween = { from: c.pose, toIdx: to, start: t + m.advanceAt + d * 140, dur: m.advance || ADVANCE,
           z: zAt(to), lift: to === 0 ? .8 : .2, bow: to === 0 ? -10 : 0 };
         c.pos = to;
       }
@@ -285,6 +303,9 @@
   const mParam = params.get('m');
   motion = MOTIONS[mParam] ? mParam : MOTIONS[store.get('stack-motion')] ? store.get('stack-motion') : 'turn';
   depth = (params.get('d') || store.get('stack-depth')) !== 'flat';
+  let pill = (params.get('s') || store.get('stack-shape')) === 'pill';
+  shapeMix = pill ? 1 : 0;
+  document.body.dataset.shape = pill ? 'pill' : 'card';
   rotMix = depth ? 1 : 0;
   blurMix = motion === 'focus' ? 1 : 0;
 
@@ -295,13 +316,15 @@
     Object.entries(MOTIONS).map(([id, m]) => `<button type="button" data-m="${id}" aria-pressed="${id === motion}">${m.label}</button>`).join('') +
     '<span class="switcher-sep" aria-hidden="true"></span><span class="switcher-label">Depth</span>' +
     `<button type="button" data-d="3d" aria-pressed="${depth}">3D</button><button type="button" data-d="flat" aria-pressed="${!depth}">Flat</button>` +
+    '<span class="switcher-sep" aria-hidden="true"></span><span class="switcher-label">Shape</span>' +
+    `<button type="button" data-s="card" aria-pressed="${!pill}">Card</button><button type="button" data-s="pill" aria-pressed="${pill}">Pill</button>` +
     `<span class="motion-note" id="motion-note">${MOTIONS[motion].note}</span>`;
   function setParam(k, v) {
     const q = new URLSearchParams(location.search); q.set(k, v); q.delete('t');
     history.replaceState(null, '', '?' + q.toString());
   }
   mNav.addEventListener('click', e => {
-    const b = e.target.closest('[data-m], [data-d]');
+    const b = e.target.closest('[data-m], [data-d], [data-s]');
     if (!b) return;
     if (b.dataset.m && b.dataset.m !== motion) {
       motion = b.dataset.m; store.set('stack-motion', motion); setParam('m', motion);
@@ -309,6 +332,8 @@
       next = Math.min(next, performance.now() + 900);    // show the new style straight away
     }
     if (b.dataset.d) { depth = b.dataset.d === '3d'; store.set('stack-depth', b.dataset.d); setParam('d', b.dataset.d); }
+    if (b.dataset.s) { pill = b.dataset.s === 'pill'; store.set('stack-shape', b.dataset.s); setParam('s', b.dataset.s); document.body.dataset.shape = b.dataset.s; }
+    mNav.querySelectorAll('[data-s]').forEach(x => x.setAttribute('aria-pressed', (x.dataset.s === 'pill') === pill));
     mNav.querySelectorAll('[data-m]').forEach(x => x.setAttribute('aria-pressed', x.dataset.m === motion));
     mNav.querySelectorAll('[data-d]').forEach(x => x.setAttribute('aria-pressed', (x.dataset.d === '3d') === depth));
   });
@@ -339,6 +364,7 @@
     const fr = jump !== null ? 1 : .05;
     rotMix += ((depth ? 1 : 0) - rotMix) * fr;
     blurMix += ((motion === 'focus' ? 1 : 0) - blurMix) * fr;
+    shapeMix += ((pill ? 1 : 0) - shapeMix) * (jump !== null ? 1 : .045);
     cards.forEach(c => place(c, t));
   }
 
