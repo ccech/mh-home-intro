@@ -17,10 +17,10 @@
 
 * { box-sizing: border-box; }
 html, body { margin: 0; background: var(--page); }
-body { overflow: hidden; font-family: 'Montserrat', sans-serif; -webkit-font-smoothing: antialiased; }
+body { overflow-x: hidden; font-family: 'Montserrat', sans-serif; -webkit-font-smoothing: antialiased; }
 
 .hero { position: relative; height: 100vh; min-height: 520px; background: var(--page); }
-.stage { position: absolute; left: 50%; top: 50%; width: 1440px; height: 728px; transform-origin: 0 0; }
+.stage { position: absolute; left: 50%; top: 50%; width: 1440px; height: 728px; transform-origin: 0 0; z-index: 1; }
 
 /* Left: navy text panel */
 .panel { position: absolute; left: 32px; top: 34px; width: 561px; height: 660px; border-radius: 17px; background: var(--panel); }
@@ -84,7 +84,7 @@ body { overflow: hidden; font-family: 'Montserrat', sans-serif; -webkit-font-smo
   max-width: calc(100vw - 32px); background: rgba(6, 36, 59, .7); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-radius: 22px;
   transition: opacity .35s ease;
 }
-body:not(.chrome-top) .switcher:not(:focus-within) { opacity: 0; pointer-events: none; }
+body:not(.chrome-top) .switcher:not(.switcher--mode):not(:focus-within) { opacity: 0; pointer-events: none; }
 .switcher a, .switcher button {
   font: 500 12px/1 'Montserrat', sans-serif; color: rgba(255, 255, 255, .82); text-decoration: none;
   padding: 8px 12px; border-radius: 999px; border: 0; background: none; cursor: pointer;
@@ -95,3 +95,24 @@ body:not(.chrome-top) .switcher:not(:focus-within) { opacity: 0; pointer-events:
 .switcher-label { font: 500 11px/1 'Montserrat', sans-serif; letter-spacing: .1em; text-transform: uppercase; color: rgba(255, 255, 255, .6); padding: 0 6px 0 10px; }
 .switcher-sep { width: 1px; height: 18px; background: rgba(255, 255, 255, .25); margin: 0 6px; }
 .note { font: 500 12px/1.35 'Montserrat', sans-serif; color: rgba(255, 255, 255, .78); padding: 0 12px 0 8px; max-width: 320px; }
+
+/* ---------- Scroll hand-off ---------- */
+/* Page-level photo layer in stage units; the photos travel from the panel down into the support row */
+.photos { position: absolute; left: 0; top: 0; width: 1440px; height: 728px; transform-origin: 0 0; z-index: 2; pointer-events: none; }
+.pcard {
+  position: absolute; left: 0; top: 0; overflow: hidden; visibility: hidden; will-change: transform, width, height;
+  box-shadow: 0 calc(16px + var(--lift, 0) * 14px) calc(40px + var(--lift, 0) * 20px) -12px rgba(1, 22, 40, calc(.22 + var(--lift, 0) * .1));
+}
+.pcard img { position: absolute; max-width: none; display: block; }
+.pcard-ov { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(124.48deg, rgba(6, 89, 152, 0) 31.95%, var(--veil) 100%); }
+.photos.live .pcard { pointer-events: auto; cursor: pointer; }
+/* While the photo is out of the panel, the panel itself steps back */
+.viewer.handoff { opacity: 0 !important; transition: none !important; }
+.dots { transition: opacity .4s ease; }
+.dots.handoff { opacity: 0; pointer-events: none; }
+.next { position: relative; height: 70vh; display: grid; place-items: center; background: var(--page); }
+.next span { font: 500 12px/1 'Montserrat', sans-serif; letter-spacing: .14em; text-transform: uppercase; color: rgba(75, 71, 66, .35); }
+/* Section 2 sits on the cream page, so its type and controls use the neutral palette */
+.support { --support-bg: #FDF9F7; --ink: #4B4742; --label: #4B4742; --rule: #B9B9B9; --accent: #005399; --on-accent: #FFFFFF; }
+.switcher--mode { top: auto; bottom: 16px; }
+body:not(.chrome-bottom) .switcher--mode:not(:focus-within) { opacity: 0; pointer-events: none; }

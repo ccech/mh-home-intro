@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@1,400&family=Montserrat:wght@600&display=swap">
-<link rel="stylesheet" href="split.css?v=202610282232">
+<link rel="stylesheet" href="split.css?v=202610282244">
 <script>
   // Colourway before first paint (remembered per viewer)
   (() => {
@@ -32,7 +32,10 @@
   <nav class="dots" id="dots" aria-label="Audiences"></nav>
 </div>
 </section>
+<div class="photos" id="photos"></div>
+<section class="next"><span>Next section</span></section>
 
+<script src="support.js?v=202610282244"></script>
 <script>
 (() => {
   const $ = id => document.getElementById(id);
@@ -44,23 +47,33 @@
     set(k, v) { try { localStorage.setItem(k, v); } catch {} },
   };
 
-  // ---------- Stage fit ----------
-  const stage = $('stage');
+  // Review helper: ?vh=728 fixes the hero height so a tall window can show the hand-off without scrolling
+  if (params.has('vh')) document.querySelector('.hero').style.height = params.get('vh') + 'px';
+  // ---------- Stage fit + support module ----------
+  const stage = $('stage'), photosEl = $('photos');
+  // Support row: photo index → column (-1 = no place in the row; the couch photo lifts away if it's showing)
+  const MAP = [1, 0, 2, -1, 3];
+  const support = FloatSupport.create({ map: MAP });
+  let layerTop = 0;
   const fit = () => {
     const hero = stage.parentElement;
     const k = Math.min(innerWidth / W, hero.clientHeight / H);
     stage.style.transform = `scale(${k}) translate(-50%, -50%)`;
+    const left = (innerWidth - W * k) / 2;
+    layerTop = hero.offsetTop + (hero.clientHeight - H * k) / 2;
+    photosEl.style.transform = `translate(${left}px, ${layerTop}px) scale(${k})`;
+    support.layout(k, layerTop);
   };
   addEventListener('resize', fit); fit();
 
   // ---------- Audiences ----------
   // ia = image aspect (w/h); z = zoom over "cover"; fx/fy = focal point (commuter framing from the Figma crop)
   const ITEMS = [
-    { line: 'your whole workforce',   src: '../assets/float/commuter.jpg',    ia: 1.5,    z: 1.224, fx: .545, fy: .756 },
-    { line: 'global complexity',      src: '../assets/float/bearded-man.jpg', ia: .6667,  z: 1,     fx: .5,   fy: .28 },
-    { line: 'your clients’ needs',    src: '../assets/float/curly-woman.jpg', ia: 1.5075, z: 1.06,  fx: .3,   fy: .32 },
-    { line: 'each employee’s needs',  src: '../assets/float/couch-woman.jpg', ia: 1.5,    z: 1.08,  fx: .74,  fy: .45 },
-    { line: 'your business strategy', src: '../assets/float/laptop-man.jpg',  ia: .6667,  z: 1,     fx: .5,   fy: .3 },
+    { line: 'your whole workforce',   src: '../assets/float/commuter.jpg',    ia: 1.5,    z: 1.224, fx: .545, fy: .756, card: { z: 1.16,  fx: .513, fy: .84 } },
+    { line: 'global complexity',      src: '../assets/float/bearded-man.jpg', ia: .6667,  z: 1,     fx: .5,   fy: .28,  card: { z: 1,     fx: .5,   fy: .5 } },
+    { line: 'your clients’ needs',    src: '../assets/float/curly-woman.jpg', ia: 1.5075, z: 1.06,  fx: .3,   fy: .32,  card: { z: 1,     fx: .312, fy: .5 } },
+    { line: 'each employee’s needs',  src: '../assets/float/couch-woman.jpg', ia: 1.5,    z: 1.08,  fx: .74,  fy: .45,  card: { z: 1.197, fx: .75,  fy: .04 } },
+    { line: 'your business strategy', src: '../assets/float/laptop-man.jpg',  ia: .6667,  z: 1,     fx: .5,   fy: .3,   card: { z: 1,     fx: .5,   fy: .5 } },
   ];
   const BA = VW / VH;
   function frameImg(img, it) {
@@ -203,10 +216,10 @@
   let style = TRANSITIONS[params.get('tr')] ? params.get('tr') : TRANSITIONS[store.get('split-transition')] ? store.get('split-transition') : 'drift';
   const syncDots = () => dots.forEach((d, i) => d.setAttribute('aria-current', i === cur));
 
-  function schedule() { clearTimeout(timer); if (!paused) timer = setTimeout(() => go((cur + 1) % ITEMS.length), HOLD); }
+  function schedule() { clearTimeout(timer); if (!paused) timer = setTimeout(() => support.p > .01 ? schedule() : go((cur + 1) % ITEMS.length), HOLD); }
 
   function go(i) {
-    if (i === cur || busy) return;
+    if (i === cur || busy || support.p > .01) return;
     busy = true;
     const out = slides[cur], inn = slides[i];
     const T = TRANSITIONS[reduce ? 'drift' : style];
@@ -220,7 +233,7 @@
       T.cleanup?.(inn, out);
       out.classList.remove('on', 'live', 'anim'); out.style.zIndex = '';
       inn.classList.remove('anim'); inn.classList.add('on'); inn.style.zIndex = '';
-      requestAnimationFrame(() => inn.classList.add('live'));
+      requestAnimationFrame(() => { inn.classList.add('live'); liveStart = performance.now(); });
       busy = false;
       schedule();
     });
@@ -259,12 +272,108 @@
     nav.querySelectorAll('[data-t]').forEach(x => x.setAttribute('aria-pressed', x.dataset.t === style));
   });
   document.body.appendChild(nav);
-  addEventListener('mousemove', e => document.body.classList.toggle('chrome-top', e.clientY < 150 && e.clientX < 900));
-  document.documentElement.addEventListener('mouseleave', () => document.body.classList.remove('chrome-top'));
+  addEventListener('mousemove', e => {
+    document.body.classList.toggle('chrome-top', e.clientY < 150 && e.clientX < 900);
+    document.body.classList.toggle('chrome-bottom', e.clientY > innerHeight - 100);
+  });
+  document.documentElement.addEventListener('mouseleave', () => document.body.classList.remove('chrome-top', 'chrome-bottom'));
+
+  // ---------- Scroll hand-off: panel photo → large row → support row ----------
+  // Stage 1 (first half of the scroll): the showing photo lifts out of the panel, reshaping into a tall card as it
+  // drifts down, and the others rise in to join it as a large row centred on screen. Stage 2: the row scales down
+  // into the support module's audience row.
+  let liveStart = 0;
+  const AR = 441 / 310, VIEW = { cx: 608 + VW / 2, cy: 35 + VH / 2, w: VW, h: VH };
+  const MID_W = 270, MID_GAP = 300;
+  const clamp01 = u => Math.max(0, Math.min(1, u));
+  const lerp = (a, b, u) => a + (b - a) * u;
+  const soft = u => lerp(u, (1 - Math.cos(Math.PI * u)) / 2, .6);
+  const lerpRect = (a, b, u) => ({ cx: lerp(a.cx, b.cx, u), cy: lerp(a.cy, b.cy, u), w: lerp(a.w, b.w, u), h: lerp(a.h, b.h, u) });
+  const cards = ITEMS.map((it, i) => {
+    const el = document.createElement('div');
+    el.className = 'pcard';
+    const img = new Image(); img.src = it.src; img.alt = '';
+    el.appendChild(img);
+    el.appendChild(Object.assign(document.createElement('div'), { className: 'pcard-ov' }));
+    photosEl.appendChild(el);
+    support.bindCard(el, i);
+    return { el, img, it, i };
+  });
+  // Frame the photo for any box aspect, blending the wide-panel crop and the portrait card crop
+  function frameCard(c, a) {
+    const t = clamp01((a - .703) / (BA - .703)), it = c.it;
+    const z = lerp(it.card.z, it.z, t), fx = lerp(it.card.fx, it.fx, t), fy = lerp(it.card.fy, it.fy, t);
+    let w, h;
+    if (it.ia > a) { h = 100 * z; w = h * it.ia / a; } else { w = 100 * z; h = w * a / it.ia; }
+    Object.assign(c.img.style, { width: w + '%', height: h + '%', left: -(w - 100) * fx + '%', top: -(h - 100) * fy + '%',
+      transformOrigin: `${fx * 100}% ${fy * 100}%` });
+  }
+  let sp = 0, handing = false;
+  function handoff(now) {
+    sp += (scrollY - sp) * (params.has('p') ? 1 : .07);
+    support.update(sp, params.has('p') ? +params.get('p') : undefined);
+    const p = support.p;
+    const on = p > .002;
+    if (on !== handing) {
+      handing = on;
+      viewer.classList.toggle('handoff', on);
+      dotsEl.classList.toggle('handoff', on);
+    }
+    if (!on) { cards.forEach(c => { c.el.style.visibility = 'hidden'; }); return; }
+
+    const k = support.k;
+    const midY = (.5 * support.pFull + innerHeight / 2 - layerTop) / k;   // centre of the screen halfway through
+    const u1 = clamp01(p / .5), u2 = clamp01((p - .5) / .5);
+    const liveScale = 1 + .05 * Math.min(1, (now - liveStart) / 9000);
+
+    for (const c of cards) {
+      const col = MAP[c.i], isCur = c.i === cur;
+      if (col < 0 && !isCur) { c.el.style.visibility = 'hidden'; continue; }
+      const mid = { cx: col < 0 ? 720 : 720 + (col - 1.5) * MID_GAP, cy: midY, w: MID_W, h: MID_W * AR };
+      let r, op, e1;
+      if (isCur) {
+        e1 = soft(u1);
+        r = lerpRect(VIEW, mid, e1); op = 1;
+      } else {
+        // The others rise in from below, a beat apart, and fade up as they join
+        const v = clamp01((u1 - .1 - col * .05) / .65);
+        e1 = soft(v);
+        const start = { cx: 720 + (mid.cx - 720) * 1.45, cy: midY + 520, w: MID_W * 1.08, h: MID_W * 1.08 * AR };
+        r = lerpRect(start, mid, e1); op = clamp01(v * 1.6);
+      }
+      let z = isCur ? 5 : 3, radius = isCur ? lerp(17, 10, e1) : 10, lift = Math.sin(Math.PI * e1) * .8;
+      if (u2 > 0) {
+        const T = support.target(c.i);
+        const v2 = clamp01((u2 - Math.max(0, col) * .05) / .8), e2 = soft(v2);
+        if (T) {
+          r = lerpRect(r, { cx: T.cx, cy: T.cy, w: T.w, h: T.w * AR }, e2);
+          op = lerp(op, T.opacity, e2);
+          if (e2 > .5) z = T.z;
+        } else {
+          r = lerpRect(r, { cx: mid.cx, cy: mid.cy - 140, w: mid.w * .85, h: mid.w * .85 * AR }, e2);
+          op *= 1 - e2;
+        }
+        lift *= 1 - e2;
+      }
+      c.el.style.visibility = op > .01 ? 'visible' : 'hidden';
+      c.el.style.width = r.w + 'px'; c.el.style.height = r.h + 'px';
+      c.el.style.transform = `translate(${r.cx - r.w / 2}px, ${r.cy - r.h / 2}px)`;
+      c.el.style.opacity = op;
+      c.el.style.zIndex = z;
+      c.el.style.borderRadius = radius + 'px';
+      c.el.style.setProperty('--lift', lift.toFixed(3));
+      // The panel's dark corner and breathing zoom ease away as the photo leaves the panel
+      c.el.querySelector('.pcard-ov').style.opacity = isCur ? 1 - e1 : 0;
+      c.img.style.transform = `scale(${isCur ? lerp(liveScale, 1, e1) : 1})`;
+      frameCard(c, r.w / r.h);
+    }
+  }
+  const tick = now => { handoff(now); requestAnimationFrame(tick); };
+  requestAnimationFrame(tick);
 
   // ---------- Start ----------
   slides[0].classList.add('on');
-  requestAnimationFrame(() => { document.body.classList.remove('intro'); slides[0].classList.add('live'); });
+  requestAnimationFrame(() => { document.body.classList.remove('intro'); slides[0].classList.add('live'); liveStart = performance.now(); });
   showLine(ITEMS[0].line, 0, 800);
   syncDots();
 
