@@ -212,3 +212,10 @@ body { overflow-x: hidden; font-family: 'Montserrat', sans-serif; -webkit-font-s
 body:not(.chrome-top) .switcher:not(.switcher--mode):not(:focus-within),
 body:not(.chrome-bottom) .switcher--mode:not(:focus-within),
 body:not(.chrome-bottom) .ctrl:not(:focus-within) { opacity: 0; pointer-events: none; }
+
+/* Softer drop shadow on Stack photos: shorter, tighter and about half the strength of Float's */
+.card {
+  box-shadow:
+    0 calc(var(--sh, 1) * (14px + var(--lift, 0) * 10px)) calc(var(--sh, 1) * (36px + var(--lift, 0) * 16px)) calc(var(--sh, 1) * -10px) rgba(var(--shadow-rgb), calc(var(--shadow-a1) * .5 * var(--sha, 1))),
+    0 calc(var(--sh, 1) * 4px) calc(var(--sh, 1) * 12px) calc(var(--sh, 1) * -6px) rgba(var(--shadow-rgb), calc(var(--shadow-a2) * .6 * var(--sha, 1)));
+}
