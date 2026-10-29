@@ -25,7 +25,8 @@
   --haze-rgb: 246, 239, 232;     /* the hero gradient's light corner, used for the haze over the line */
   --hero-rule: #B9B9B9;
   --follow: #005399;
-  --frame: #B9B9B9;
+  --frame-from: rgba(75, 71, 66, .45);
+  --frame-to: rgba(75, 71, 66, .06);
 }
 /* Navy — Figma 4013:1261 + 4013:1275. The space above the module mirrors the hero gradient so the two meet without a seam. */
 [data-colorway="navy"] {
@@ -50,7 +51,8 @@
   --haze-rgb: 6, 89, 152;
   --hero-rule: #FFFFFF;
   --follow: #B3D4FB;
-  --frame: #FFFFFF;
+  --frame-from: #FFFFFF;
+  --frame-to: rgba(179, 212, 251, .12);
 }
 /* Sky — Figma 4013:1294 + 4013:1304 */
 [data-colorway="sky"] {
@@ -72,7 +74,8 @@
   --haze-rgb: 255, 251, 232;
   --hero-rule: #B9B9B9;
   --follow: #0069BF;
-  --frame: #B9B9B9;
+  --frame-from: rgba(0, 83, 153, .45);
+  --frame-to: rgba(0, 83, 153, .06);
 }
 
 * { box-sizing: border-box; }
@@ -178,7 +181,14 @@ body { overflow-x: hidden; font-family: 'Montserrat', sans-serif; -webkit-font-s
 .rule { position: absolute; left: 89px; top: 257px; width: 1px; height: 68px; background: var(--hero-rule); z-index: 5; transform-origin: 50% 0; transition: transform 1.2s cubic-bezier(.3,.7,.2,1) .5s; }
 .intro .rule { transform: scaleY(0); }
 /* Thin rounded frame around the hero (Figma 4018:1382); it sits above the photos, as in the comp */
-.frame { position: absolute; left: 32px; top: 32px; width: 1376px; height: 750px; border: 1px solid var(--frame); border-radius: 17px; z-index: 6; pointer-events: none; transition: opacity 1.6s ease .2s; }
+.frame {
+  position: absolute; left: 32px; top: 32px; width: 1376px; height: 750px; border-radius: 17px; z-index: 6; pointer-events: none;
+  /* 1px gradient stroke (Figma: white → #B3D4FB at 12%, top-left to bottom-right), drawn as a masked border ring */
+  padding: 1px; background: linear-gradient(114deg, var(--frame-from) -2%, var(--frame-to) 99%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
+          mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  transition: opacity 1.6s ease .2s;
+}
 .intro .frame { opacity: 0; }
 /* Cards turn in 3D around their own centre; the shade veil fades a card back into the page as it recedes */
 .card::after { content: ''; position: absolute; inset: 0; background: var(--shade); opacity: var(--veil, 0); pointer-events: none; }
