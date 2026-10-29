@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@1,400&family=Montserrat:wght@600&display=swap">
-<link rel="stylesheet" href="split.css?v=202610282244">
+<link rel="stylesheet" href="split.css?v=202610282246">
 <script>
   // Colourway before first paint (remembered per viewer)
   (() => {
@@ -35,7 +35,7 @@
 <div class="photos" id="photos"></div>
 <section class="next"><span>Next section</span></section>
 
-<script src="support.js?v=202610282244"></script>
+<script src="support.js?v=202610282246"></script>
 <script>
 (() => {
   const $ = id => document.getElementById(id);
@@ -326,20 +326,27 @@
     const u1 = clamp01(p / .5), u2 = clamp01((p - .5) / .5);
     const liveScale = 1 + .05 * Math.min(1, (now - liveStart) / 9000);
 
+    const midOf = col => ({ cx: col < 0 ? 720 : 720 + (col - 1.5) * MID_GAP, cy: midY, w: MID_W, h: MID_W * AR });
+    // Where the showing photo is right now: the others travel level with it
+    const curCol = MAP[cur], curX = midOf(curCol).cx;
+    const curRect = lerpRect(VIEW, midOf(curCol), soft(u1));
     for (const c of cards) {
       const col = MAP[c.i], isCur = c.i === cur;
       if (col < 0 && !isCur) { c.el.style.visibility = 'hidden'; continue; }
-      const mid = { cx: col < 0 ? 720 : 720 + (col - 1.5) * MID_GAP, cy: midY, w: MID_W, h: MID_W * AR };
+      const mid = midOf(col);
       let r, op, e1;
       if (isCur) {
         e1 = soft(u1);
         r = lerpRect(VIEW, mid, e1); op = 1;
       } else {
-        // The others rise in from below, a beat apart, and fade up as they join
-        const v = clamp01((u1 - .1 - col * .05) / .65);
+        // The others slide in from the sides, level with the showing photo, and fade up as they join.
+        // Spots left of it come from the left edge, the rest from the right; nearer ones arrive first.
+        const fromLeft = mid.cx < curX, steps = Math.round(Math.abs(mid.cx - curX) / MID_GAP);
+        const v = clamp01((u1 - .08 - (steps - 1) * .06) / .7);
         e1 = soft(v);
-        const start = { cx: 720 + (mid.cx - 720) * 1.45, cy: midY + 520, w: MID_W * 1.08, h: MID_W * 1.08 * AR };
-        r = lerpRect(start, mid, e1); op = clamp01(v * 1.6);
+        const startX = fromLeft ? -260 - (steps - 1) * MID_GAP : W + 260 + (steps - 1) * MID_GAP;
+        r = { cx: lerp(startX, mid.cx, e1), cy: curRect.cy, w: lerp(MID_W * 1.1, MID_W, e1), h: lerp(MID_W * 1.1, MID_W, e1) * AR };
+        op = clamp01(v * 1.8);
       }
       let z = isCur ? 5 : 3, radius = isCur ? lerp(17, 10, e1) : 10, lift = Math.sin(Math.PI * e1) * .8;
       if (u2 > 0) {
