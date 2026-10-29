@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@1,400&family=Montserrat:wght@600&display=swap">
-<link rel="stylesheet" href="split.css?v=202610282246">
+<link rel="stylesheet" href="split.css?v=202610282252">
 <script>
   // Colourway before first paint (remembered per viewer)
   (() => {
@@ -35,7 +35,7 @@
 <div class="photos" id="photos"></div>
 <section class="next"><span>Next section</span></section>
 
-<script src="support.js?v=202610282246"></script>
+<script src="support.js?v=202610282252"></script>
 <script>
 (() => {
   const $ = id => document.getElementById(id);
@@ -323,45 +323,47 @@
 
     const k = support.k;
     const midY = (.5 * support.pFull + innerHeight / 2 - layerTop) / k;   // centre of the screen halfway through
-    const u1 = clamp01(p / .5), u2 = clamp01((p - .5) / .5);
     const liveScale = 1 + .05 * Math.min(1, (now - liveStart) / 9000);
-
-    const midOf = col => ({ cx: col < 0 ? 720 : 720 + (col - 1.5) * MID_GAP, cy: midY, w: MID_W, h: MID_W * AR });
-    // Where the showing photo is right now: the others travel level with it
+    // One continuous curve per photo: start → (sweeps through the large row) → support row. The large row is a
+    // waypoint the curve passes through at speed, not a stop, so nothing pauses and lines up mid-scroll.
+    const bez = (a, m, b, t) => { const c = 2 * m - (a + b) / 2, u = 1 - t; return u * u * a + 2 * u * t * c + t * t * b; };
+    // Size passes through the large-row size at the halfway point, without easing there (no pause)
+    const thru = (a, m, b, t) => t < .5 ? lerp(a, m, t / .5) : lerp(m, b, (t - .5) / .5);
+    const midOf = col => ({ cx: col < 0 ? 720 : 720 + (col - 1.5) * MID_GAP, cy: midY, w: MID_W });
+    const endOf = (i, col) => { const T = support.target(i); return T || { cx: 720, cy: midY - 140, w: MID_W * .85, opacity: 0, z: 1, gone: true }; };
+    const settle = soft(clamp01((p - .55) / .45));   // last stretch: row opacity / layering take over
     const curCol = MAP[cur], curX = midOf(curCol).cx;
-    const curRect = lerpRect(VIEW, midOf(curCol), soft(u1));
+    const tCur = soft(p);
+    const curE = endOf(cur, curCol), curM = midOf(curCol);
+    // The showing photo's height on screen; the others travel level with it
+    const curCy = bez(VIEW.cy, curM.cy, curE.cy, tCur);
     for (const c of cards) {
       const col = MAP[c.i], isCur = c.i === cur;
       if (col < 0 && !isCur) { c.el.style.visibility = 'hidden'; continue; }
-      const mid = midOf(col);
-      let r, op, e1;
+      const M = midOf(col), E = endOf(c.i, col);
+      let r, op, t;
       if (isCur) {
-        e1 = soft(u1);
-        r = lerpRect(VIEW, mid, e1); op = 1;
+        t = tCur;
+        const w = thru(VIEW.w, M.w, E.w, t);
+        // Reshape from the wide panel to a portrait card over the first part of the journey
+        const h = lerp(VIEW.h, w * AR, soft(clamp01(t * 1.8)));
+        // Sideways travel is a straight line to its spot, so photos never cross
+        r = { cx: lerp(VIEW.cx, E.cx, t), cy: curCy, w, h };
+        op = E.gone ? 1 - settle : lerp(1, E.opacity, settle);
       } else {
-        // The others slide in from the sides, level with the showing photo, and fade up as they join.
-        // Spots left of it come from the left edge, the rest from the right; nearer ones arrive first.
-        const fromLeft = mid.cx < curX, steps = Math.round(Math.abs(mid.cx - curX) / MID_GAP);
-        const v = clamp01((u1 - .08 - (steps - 1) * .06) / .7);
-        e1 = soft(v);
+        // The others slide in from the sides, level with the showing photo. They share its timing so nobody
+        // crosses paths; nearer spots still arrive first because they start closer in.
+        const fromLeft = M.cx < curX, steps = Math.round(Math.abs(M.cx - curX) / MID_GAP);
+        t = tCur;
         const startX = fromLeft ? -260 - (steps - 1) * MID_GAP : W + 260 + (steps - 1) * MID_GAP;
-        r = { cx: lerp(startX, mid.cx, e1), cy: curRect.cy, w: lerp(MID_W * 1.1, MID_W, e1), h: lerp(MID_W * 1.1, MID_W, e1) * AR };
-        op = clamp01(v * 1.8);
+        const w = thru(MID_W * 1.1, M.w, E.w, t);
+        r = { cx: lerp(startX, E.cx, t), cy: curCy, w, h: w * AR };
+        op = clamp01(t * 3) * lerp(1, E.opacity, settle);
       }
-      let z = isCur ? 5 : 3, radius = isCur ? lerp(17, 10, e1) : 10, lift = Math.sin(Math.PI * e1) * .8;
-      if (u2 > 0) {
-        const T = support.target(c.i);
-        const v2 = clamp01((u2 - Math.max(0, col) * .05) / .8), e2 = soft(v2);
-        if (T) {
-          r = lerpRect(r, { cx: T.cx, cy: T.cy, w: T.w, h: T.w * AR }, e2);
-          op = lerp(op, T.opacity, e2);
-          if (e2 > .5) z = T.z;
-        } else {
-          r = lerpRect(r, { cx: mid.cx, cy: mid.cy - 140, w: mid.w * .85, h: mid.w * .85 * AR }, e2);
-          op *= 1 - e2;
-        }
-        lift *= 1 - e2;
-      }
+      const z = settle > .5 ? E.z : (isCur ? 5 : 3);
+      const radius = isCur ? lerp(17, 10, clamp01(t * 2)) : 10;
+      const lift = Math.sin(Math.PI * t) * .8 * (1 - settle);
+      const e1 = clamp01(t * 2.2);
       c.el.style.visibility = op > .01 ? 'visible' : 'hidden';
       c.el.style.width = r.w + 'px'; c.el.style.height = r.h + 'px';
       c.el.style.transform = `translate(${r.cx - r.w / 2}px, ${r.cy - r.h / 2}px)`;
