@@ -6,6 +6,7 @@
 
 :root, [data-colorway="navy"] {
   --page: #FDF9F7;
+  --glow: #CFE5FF;                /* frame gradient's blue hint */
   --panel: linear-gradient(115.65deg, rgba(6, 89, 152, 0) 31.95%, #065998 100%), #012346;
   --ink: #FAF4EE;
   --follow: #B3D4FB;
@@ -19,7 +20,15 @@
 html, body { margin: 0; background: var(--page); }
 body { overflow-x: hidden; font-family: 'Montserrat', sans-serif; -webkit-font-smoothing: antialiased; }
 
-.hero { position: relative; height: 100vh; min-height: 520px; background: var(--page); }
+/* Frame gradient (4022:1430: 169.41deg, cream to #CFE5FF), its angle turning slowly so a hint of blue drifts around behind the panels. */
+@property --sweep { syntax: '<angle>'; inherits: false; initial-value: 169.41deg; }
+@keyframes sweep { to { --sweep: 529.41deg; } }
+.hero {
+  position: relative; height: 100vh; min-height: 520px; background: var(--page);
+  background: linear-gradient(var(--sweep), var(--page) 72.58%, var(--glow) 100.49%);
+  animation: sweep 48s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) { .hero { animation: none; } }
 .stage { position: absolute; left: 50%; top: 50%; width: 1440px; height: 728px; transform-origin: 0 0; z-index: 1; }
 
 /* Left: navy text panel */
