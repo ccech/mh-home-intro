@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@1,400&family=Montserrat:wght@600&display=swap">
-<link rel="stylesheet" href="split.css?v=202610282252">
+<link rel="stylesheet" href="split.css?v=202610282302">
 <script>
   // Colourway before first paint (remembered per viewer)
   (() => {
@@ -35,7 +35,7 @@
 <div class="photos" id="photos"></div>
 <section class="next"><span>Next section</span></section>
 
-<script src="support.js?v=202610282252"></script>
+<script src="support.js?v=202610282302"></script>
 <script>
 (() => {
   const $ = id => document.getElementById(id);
@@ -203,7 +203,7 @@
   };
 
   // ---------- Sequence ----------
-  const HOLD = 5200;
+  const HOLD = 3600;   // ms between photo changes
   const dotsEl = $('dots');
   const dots = ITEMS.map((it, i) => {
     const b = document.createElement('button');
