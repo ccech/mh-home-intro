@@ -21,15 +21,11 @@
 html, body { margin: 0; background: var(--page); }
 body { overflow-x: hidden; font-family: 'Montserrat', sans-serif; -webkit-font-smoothing: antialiased; }
 
-/* Frame gradient (4022:1430: 138.18deg, peach 0 → .55 over the cream), its angle turning slowly so the hint drifts around behind the panels. */
-@property --sweep { syntax: '<angle>'; inherits: false; initial-value: 138.18deg; }
-@keyframes sweep { to { --sweep: 498.18deg; } }
+/* Frame gradient (4022:1430): peach fading in toward the bottom-right, over the cream. */
 .hero {
-  position: relative; height: 100vh; min-height: 520px; background: var(--page);
-  background: linear-gradient(var(--sweep), var(--glow-0) 31.95%, var(--glow) 100%) var(--page);
-  animation: sweep 36s linear infinite;
+  position: relative; height: 100vh; min-height: 520px;
+  background: linear-gradient(138.18deg, var(--glow-0) 31.95%, var(--glow) 100%) var(--page);
 }
-@media (prefers-reduced-motion: reduce) { .hero { animation: none; } }
 .stage { position: absolute; left: 50%; top: 50%; width: 1440px; height: 728px; transform-origin: 0 0; z-index: 1; }
 
 /* Left: navy text panel */
