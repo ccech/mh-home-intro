@@ -7,15 +7,15 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@1,400&family=Montserrat:wght@600&display=swap">
-<link rel="stylesheet" href="stack.css?v=202610282218">
-<script src="chrome.js?v=202610282218"></script>
+<link rel="stylesheet" href="stack.css?v=202610282224">
+<script src="chrome.js?v=202610282224"></script>
 </head>
 <body class="intro">
 <section class="hero">
 <div class="stage" id="stage">
   <div class="frame" aria-hidden="true"></div>
-  <h1 class="hl">Mental health care that adapts</h1>
-  <p class="follow" id="follow" aria-live="polite"><span class="to">to</span></p>
+  <h1 class="hl">Mental health<br>care that adapts to</h1>
+  <p class="follow" id="follow" aria-live="polite"></p>
   <p class="copy">One global mental health benefit connecting employees to coaching, therapy, and more, with clinical guidance to help them find support that fits their needs.</p>
   <div class="btns"><a class="btn" href="#">Talk to our team</a><a class="btn btn--ghost" href="#">How it works</a></div>
 </div>
@@ -27,7 +27,7 @@
   <button class="pause" id="pause" aria-label="Pause"></button>
 </div>
 
-<script src="support.js?v=202610282218"></script>
+<script src="support.js?v=202610282224"></script>
 <script>
 (() => {
   const $ = id => document.getElementById(id);
@@ -185,8 +185,7 @@
   function makeLine(text) {
     const el = document.createElement('span');
     el.className = 'line';
-    el.setAttribute('aria-label', 'to ' + text);
-    el.innerHTML = '<span class="spacer" aria-hidden="true">to </span>';
+    el.setAttribute('aria-label', text);
     let i = 0;
     text.split(' ').forEach((word, wi) => {
       if (wi) el.appendChild(document.createTextNode(' '));
