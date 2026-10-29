@@ -7,8 +7,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@1,400&family=Montserrat:wght@600&display=swap">
-<link rel="stylesheet" href="stack.css?v=202610281709">
-<script src="chrome.js?v=202610281709"></script>
+<link rel="stylesheet" href="stack.css?v=202610281713">
+<script src="chrome.js?v=202610281713"></script>
 </head>
 <body class="intro">
 <section class="hero">
@@ -28,7 +28,7 @@
   <button class="pause" id="pause" aria-label="Pause"></button>
 </div>
 
-<script src="support.js?v=202610281709"></script>
+<script src="support.js?v=202610281713"></script>
 <script>
 (() => {
   const $ = id => document.getElementById(id);
@@ -203,8 +203,9 @@
     turn: {
       label: 'Turn',
       note: 'The front photo swings away like a turning card; the next one rotates round to face you.',
-      exit: { pose: pose(front, { cx: 660, cy: 418, w: 380, rot: -70, veil: .25, op: 0 }), dur: 2600, z: 12, lift: .6 },
-      advanceAt: 350, textOut: 1500, textIn: 800,
+      // A little snappier than the others: quicker swing-away, and the line steps up sooner
+      exit: { pose: pose(front, { cx: 660, cy: 418, w: 380, rot: -70, veil: .25, op: 0 }), dur: 1700, z: 12, lift: .6 },
+      advanceAt: 200, advance: 2200, textOut: 900, textIn: 650,
     },
     lift: {
       label: 'Lift',
@@ -241,12 +242,12 @@
         c.tween = { from: c.pose, to: ex.pose, start: t + (s - 1 - c.pos) * 120, dur: ex.dur, z: ex.z, lift: ex.lift, ease: ex.ease, then: to };
       } else {
         const d = c.pos - s;   // 0 = new front card
-        c.tween = { from: c.pose, to: pose(POSES[to]), start: t + m.advanceAt + d * 140, dur: ADVANCE,
+        c.tween = { from: c.pose, to: pose(POSES[to]), start: t + m.advanceAt + d * 140, dur: m.advance || ADVANCE,
           z: zAt(to), lift: to === 0 ? .8 : .2, bow: to === 0 ? -10 : 0 };
         c.pos = to;
       }
     }
-    swapUntil = t + Math.max(m.exit.dur, m.advanceAt + 3 * 140 + ADVANCE) + 100;
+    swapUntil = t + Math.max(m.exit.dur, m.advanceAt + 3 * 140 + (m.advance || ADVANCE)) + 100;
     cur = i;
     showLine(ITEMS[i].line, reduce ? 0 : m.textOut, reduce ? 0 : m.textIn);
     next = t + HOLD;
