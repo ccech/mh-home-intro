@@ -8,7 +8,8 @@ window.FloatChrome = (() => {
   ];
   const COLORWAYS = [
     { id: 'neutral', label: 'Neutral', swatch: '#F6EFE8' },
-    { id: 'navy',    label: 'Navy',    swatch: '#012346' },
+    { id: 'navy',    label: 'Navy',    swatch: 'linear-gradient(135deg, #012346 45%, #065998)' },
+    { id: 'navy-solid', label: 'Navy Solid', swatch: '#012346' },
     { id: 'sky',     label: 'Sky',     swatch: '#DFEEFF' },
   ];
   const store = {

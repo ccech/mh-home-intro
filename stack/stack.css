@@ -29,7 +29,7 @@
   --frame-to: rgba(75, 71, 66, .06);
 }
 /* Navy — Figma 4013:1261 + 4013:1275. The space above the module mirrors the hero gradient so the two meet without a seam. */
-[data-colorway="navy"] {
+[data-colorway="navy"], [data-colorway="navy-solid"] {
   --page: #012346;
   --hero-bg: linear-gradient(134.98deg, rgba(6, 89, 152, 0) 31.95%, #065998 100%), #012346;
   --support-bg:
@@ -53,6 +53,12 @@
   --follow: #B3D4FB;
   --frame-from: #FFFFFF;
   --frame-to: rgba(179, 212, 251, .12);
+}
+/* Navy Solid: the Navy colourway on a flat #012346 background (no blue glow) */
+[data-colorway="navy-solid"] {
+  --hero-bg: #012346;
+  --support-bg: #012346;
+  --haze-rgb: 1, 35, 70;          /* waiting photos fade into the navy itself */
 }
 /* Sky — Figma 4013:1294 + 4013:1304 */
 [data-colorway="sky"] {
