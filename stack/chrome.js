@@ -4,6 +4,7 @@ window.FloatChrome = (() => {
   const CONCEPTS = [
     { href: '../float-motion/index.html', label: 'Float' },
     { href: 'index.html', label: 'Stack' },
+    { href: '../split/index.html', label: 'Split' },
   ];
   const COLORWAYS = [
     { id: 'neutral', label: 'Neutral', swatch: '#F6EFE8' },

@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Split — Home Intro</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@1,400&family=Montserrat:wght@600&display=swap">
+<link rel="stylesheet" href="split.css?v=202610282232">
+<script>
+  // Colourway before first paint (remembered per viewer)
+  (() => {
+    const q = new URLSearchParams(location.search).get('c');
+    let c = null; try { c = localStorage.getItem('split-colorway'); } catch {}
+    document.documentElement.dataset.colorway = ['navy', 'navy-solid'].includes(q) ? q : ['navy', 'navy-solid'].includes(c) ? c : 'navy';
+  })();
+</script>
+</head>
+<body class="intro">
+<section class="hero">
+<div class="stage" id="stage">
+  <div class="panel" aria-hidden="true"></div>
+  <h1 class="hl">Mental health<br>care that adapts to</h1>
+  <p class="follow" id="follow" aria-live="polite"></p>
+  <p class="copy">One global mental health benefit connecting employees to coaching, therapy, and more, with clinical guidance to help them find support that fits their needs.</p>
+  <div class="btns"><a class="btn" href="#">Talk to our team</a><a class="btn btn--ghost" href="#">How it works</a></div>
+
+  <div class="viewer" id="viewer" aria-hidden="true">
+    <div class="overlay"></div>
+  </div>
+  <nav class="dots" id="dots" aria-label="Audiences"></nav>
+</div>
+</section>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const W = 1440, H = 728, VW = 800, VH = 658;
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const params = new URLSearchParams(location.search);
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch {} },
+  };
+
+  // ---------- Stage fit ----------
+  const stage = $('stage');
+  const fit = () => {
+    const hero = stage.parentElement;
+    const k = Math.min(innerWidth / W, hero.clientHeight / H);
+    stage.style.transform = `scale(${k}) translate(-50%, -50%)`;
+  };
+  addEventListener('resize', fit); fit();
+
+  // ---------- Audiences ----------
+  // ia = image aspect (w/h); z = zoom over "cover"; fx/fy = focal point (commuter framing from the Figma crop)
+  const ITEMS = [
+    { line: 'your whole workforce',   src: '../assets/float/commuter.jpg',    ia: 1.5,    z: 1.224, fx: .545, fy: .756 },
+    { line: 'global complexity',      src: '../assets/float/bearded-man.jpg', ia: .6667,  z: 1,     fx: .5,   fy: .28 },
+    { line: 'your clients’ needs',    src: '../assets/float/curly-woman.jpg', ia: 1.5075, z: 1.06,  fx: .3,   fy: .32 },
+    { line: 'each employee’s needs',  src: '../assets/float/couch-woman.jpg', ia: 1.5,    z: 1.08,  fx: .74,  fy: .45 },
+    { line: 'your business strategy', src: '../assets/float/laptop-man.jpg',  ia: .6667,  z: 1,     fx: .5,   fy: .3 },
+  ];
+  const BA = VW / VH;
+  function frameImg(img, it) {
+    let w, h;
+    if (it.ia > BA) { h = 100 * it.z; w = h * it.ia / BA; } else { w = 100 * it.z; h = w * BA / it.ia; }
+    Object.assign(img.style, { width: w + '%', height: h + '%', left: -(w - 100) * it.fx + '%', top: -(h - 100) * it.fy + '%' });
+    img.parentElement.style.setProperty('--fx', it.fx * 100 + '%');
+    img.parentElement.style.setProperty('--fy', it.fy * 100 + '%');
+  }
+  const viewer = $('viewer'), overlay = viewer.querySelector('.overlay');
+  const slides = ITEMS.map(it => {
+    const s = document.createElement('div');
+    s.className = 'slide';
+    const img = new Image(); img.src = it.src; img.alt = '';
+    s.appendChild(img);
+    s.appendChild(Object.assign(document.createElement('div'), { className: 'shade' }));
+    viewer.insertBefore(s, overlay);
+    frameImg(img, it);
+    return s;
+  });
+
+  // ---------- Follow line, letter by letter ----------
+  const follow = $('follow');
+  let lineEl = null;
+  function makeLine(text) {
+    const el = document.createElement('span');
+    el.className = 'line'; el.setAttribute('aria-label', text);
+    let i = 0;
+    text.split(' ').forEach((word, wi) => {
+      if (wi) el.appendChild(document.createTextNode(' '));
+      const w = document.createElement('span'); w.className = 'w'; w.setAttribute('aria-hidden', 'true');
+      for (const ch of word) { const c = document.createElement('span'); c.className = 'ch'; c.textContent = ch; c.style.setProperty('--i', i++); w.appendChild(c); }
+      el.appendChild(w);
+    });
+    follow.appendChild(el);
+    return el;
+  }
+  function showLine(text, outAt, inAfter) {
+    const old = lineEl, el = makeLine(text);
+    lineEl = el;
+    if (document.body.classList.contains('frozen')) { old?.remove(); el.classList.add('in'); return; }
+    setTimeout(() => {
+      if (old) { old.classList.remove('in'); old.classList.add('out'); setTimeout(() => old.remove(), 1800); }
+      setTimeout(() => requestAnimationFrame(() => el.classList.add('in')), inAfter);
+    }, outAt);
+  }
+
+  // ---------- Transitions ----------
+  // Each takes the outgoing and incoming slides and returns the Web Animations it started.
+  try { CSS.registerProperty({ name: '--wipe', syntax: '<percentage>', inherits: false, initialValue: '0%' }); } catch {}
+  const EASE = 'cubic-bezier(.65,0,.35,1)', EASE_OUT = 'cubic-bezier(.2,.7,.25,1)';
+  const shadeOf = s => s.querySelector('.shade'), imgOf = s => s.querySelector('img');
+  const TRANSITIONS = {
+    drift: {
+      label: 'Drift',
+      note: 'A slow crossfade; the new photo settles from a gentle zoom.',
+      run(out, inn) {
+        inn.style.zIndex = 2;
+        return [
+          inn.animate({ opacity: [0, 1] }, { duration: 1800, easing: 'ease-in-out' }),
+          imgOf(inn).animate({ transform: ['scale(1.07)', 'scale(1)'] }, { duration: 2600, easing: EASE_OUT }),
+        ];
+      },
+    },
+    wipe: {
+      label: 'Wipe',
+      note: 'A soft-edged diagonal reveal, sweeping along the same angle as the panel gradient.',
+      run(out, inn) {
+        inn.style.zIndex = 2;
+        inn.style.webkitMaskImage = inn.style.maskImage = 'linear-gradient(115deg, #000 calc(var(--wipe) - 28%), transparent var(--wipe))';
+        return [
+          inn.animate({ '--wipe': ['0%', '128%'] }, { duration: 1900, easing: EASE }),
+          imgOf(inn).animate({ transform: ['scale(1.05)', 'scale(1)'] }, { duration: 2400, easing: EASE_OUT }),
+          shadeOf(out).animate({ opacity: [0, .35] }, { duration: 1900, easing: 'ease-in' }),
+        ];
+      },
+      cleanup(inn) { inn.style.webkitMaskImage = inn.style.maskImage = ''; },
+    },
+    glide: {
+      label: 'Glide',
+      note: 'The next photo slides in while its picture drifts the other way, like a window passing over it.',
+      run(out, inn) {
+        inn.style.zIndex = 2;
+        return [
+          inn.animate({ transform: ['translateX(100%)', 'translateX(0)'] }, { duration: 1500, easing: EASE }),
+          imgOf(inn).animate({ transform: ['translateX(-38%)', 'translateX(0)'] }, { duration: 1500, easing: EASE }),
+          out.animate({ transform: ['translateX(0)', 'translateX(-28%)'] }, { duration: 1500, easing: EASE }),
+          shadeOf(out).animate({ opacity: [0, .5] }, { duration: 1500, easing: EASE }),
+        ];
+      },
+    },
+    slices: {
+      label: 'Slices',
+      note: 'The new photo assembles in five strips, one for each audience, rising in left to right.',
+      run(out, inn) {
+        const anims = [], N = 5;
+        inn.style.zIndex = 2; inn.style.opacity = 0;
+        for (let i = 0; i < N; i++) {
+          const strip = inn.cloneNode(true);
+          strip.classList.add('anim', 'strip'); strip.classList.remove('live', 'on');
+          strip.style.zIndex = 3; strip.style.opacity = '';
+          strip.style.clipPath = `inset(0 ${(N - 1 - i) * 100 / N}% 0 ${i * 100 / N}%)`;
+          viewer.insertBefore(strip, overlay);
+          anims.push(strip.animate({ transform: ['translateY(9%)', 'translateY(0)'], opacity: [0, 1] },
+            { duration: 1150, delay: i * 95, easing: EASE_OUT, fill: 'backwards' }));
+        }
+        anims.push(shadeOf(out).animate({ opacity: [0, .4] }, { duration: 1500, easing: 'ease-in' }));
+        return anims;
+      },
+      cleanup(inn) { inn.style.opacity = ''; viewer.querySelectorAll('.strip').forEach(s => s.remove()); },
+    },
+    turn: {
+      label: 'Turn',
+      note: 'The current photo swings away like a turning page, uncovering the next one beneath.',
+      run(out, inn) {
+        out.style.zIndex = 2; inn.style.zIndex = 1; out.style.transformOrigin = '0% 50%';
+        return [
+          out.animate({ transform: ['rotateY(0deg)', 'rotateY(78deg)'], opacity: [1, 1, 0] },
+            { duration: 1600, easing: 'cubic-bezier(.55,0,.45,1)' }),
+          shadeOf(out).animate({ opacity: [0, .65] }, { duration: 1600, easing: 'ease-in' }),
+          imgOf(inn).animate({ transform: ['scale(1.06)', 'scale(1)'] }, { duration: 2000, easing: EASE_OUT }),
+          shadeOf(inn).animate({ opacity: [.5, 0] }, { duration: 1500, easing: 'ease-out' }),
+        ];
+      },
+      cleanup(inn, out) { out.style.transformOrigin = ''; },
+    },
+  };
+
+  // ---------- Sequence ----------
+  const HOLD = 5200;
+  const dotsEl = $('dots');
+  const dots = ITEMS.map((it, i) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.setAttribute('aria-label', it.line);
+    b.addEventListener('click', () => go(i));
+    dotsEl.appendChild(b);
+    return b;
+  });
+  let cur = 0, busy = false, timer = null, paused = false, running = [];
+  let style = TRANSITIONS[params.get('tr')] ? params.get('tr') : TRANSITIONS[store.get('split-transition')] ? store.get('split-transition') : 'drift';
+  const syncDots = () => dots.forEach((d, i) => d.setAttribute('aria-current', i === cur));
+
+  function schedule() { clearTimeout(timer); if (!paused) timer = setTimeout(() => go((cur + 1) % ITEMS.length), HOLD); }
+
+  function go(i) {
+    if (i === cur || busy) return;
+    busy = true;
+    const out = slides[cur], inn = slides[i];
+    const T = TRANSITIONS[reduce ? 'drift' : style];
+    inn.classList.remove('live'); inn.classList.add('anim');
+    running = T.run(out, inn);
+    cur = i; syncDots();
+    showLine(ITEMS[i].line, reduce ? 0 : 250, reduce ? 0 : 600);
+    Promise.all(running.map(a => a.finished.catch(() => {}))).then(() => {
+      if (frozenAt != null) return;
+      running.forEach(a => a.cancel());
+      T.cleanup?.(inn, out);
+      out.classList.remove('on', 'live', 'anim'); out.style.zIndex = '';
+      inn.classList.remove('anim'); inn.classList.add('on'); inn.style.zIndex = '';
+      requestAnimationFrame(() => inn.classList.add('live'));
+      busy = false;
+      schedule();
+    });
+    schedule();
+  }
+
+  // ---------- Controls ----------
+  addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight') go((cur + 1) % ITEMS.length);
+    if (e.key === 'ArrowLeft') go((cur + ITEMS.length - 1) % ITEMS.length);
+    if (e.key === ' ') { e.preventDefault(); paused = !paused; paused ? clearTimeout(timer) : schedule(); }
+  });
+
+  const nav = document.createElement('nav');
+  nav.className = 'switcher';
+  nav.setAttribute('aria-label', 'Prototype');
+  const cw = document.documentElement.dataset.colorway;
+  nav.innerHTML =
+    `<a href="../float-motion/index.html">Float</a><a href="../stack/index.html">Stack</a><a href="index.html" aria-current="page">Split</a>` +
+    '<span class="switcher-sep" aria-hidden="true"></span>' +
+    `<button type="button" data-c="navy" aria-pressed="${cw === 'navy'}">Navy</button><button type="button" data-c="navy-solid" aria-pressed="${cw === 'navy-solid'}">Navy Solid</button>` +
+    '<span class="switcher-sep" aria-hidden="true"></span><span class="switcher-label">Transition</span>' +
+    Object.entries(TRANSITIONS).map(([id, t]) => `<button type="button" data-t="${id}" aria-pressed="${id === style}">${t.label}</button>`).join('') +
+    `<span class="note" id="note">${TRANSITIONS[style].note}</span>`;
+  function setParam(k, v) { const q = new URLSearchParams(location.search); q.set(k, v); history.replaceState(null, '', '?' + q.toString()); }
+  nav.addEventListener('click', e => {
+    const b = e.target.closest('[data-c], [data-t]');
+    if (!b) return;
+    if (b.dataset.c) { document.documentElement.dataset.colorway = b.dataset.c; store.set('split-colorway', b.dataset.c); setParam('c', b.dataset.c); }
+    if (b.dataset.t && b.dataset.t !== style) {
+      style = b.dataset.t; store.set('split-transition', style); setParam('tr', style);
+      $('note').textContent = TRANSITIONS[style].note;
+      clearTimeout(timer); if (!busy) timer = setTimeout(() => go((cur + 1) % ITEMS.length), 700);   // show it straight away
+    }
+    nav.querySelectorAll('[data-c]').forEach(x => x.setAttribute('aria-pressed', x.dataset.c === document.documentElement.dataset.colorway));
+    nav.querySelectorAll('[data-t]').forEach(x => x.setAttribute('aria-pressed', x.dataset.t === style));
+  });
+  document.body.appendChild(nav);
+  addEventListener('mousemove', e => document.body.classList.toggle('chrome-top', e.clientY < 150 && e.clientX < 900));
+  document.documentElement.addEventListener('mouseleave', () => document.body.classList.remove('chrome-top'));
+
+  // ---------- Start ----------
+  slides[0].classList.add('on');
+  requestAnimationFrame(() => { document.body.classList.remove('intro'); slides[0].classList.add('live'); });
+  showLine(ITEMS[0].line, 0, 800);
+  syncDots();
+
+  // Review helper: ?i=1&f=0.5 freezes the transition into photo i at that fraction (for screenshots)
+  const frozenAt = params.has('f') ? +params.get('f') : null;
+  if (frozenAt != null) {
+    document.body.classList.add('frozen');
+    document.body.classList.remove('intro');
+    const target = +params.get('i') || 1;
+    go(target);
+    running.forEach(a => { a.pause(); const d = a.effect.getComputedTiming(); a.currentTime = (d.delay || 0) + d.activeDuration * frozenAt; });
+    clearTimeout(timer);
+    return;
+  }
+  schedule();
+})();
+</script>
+</body>
+</html>

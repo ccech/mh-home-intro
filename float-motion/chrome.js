@@ -5,6 +5,7 @@ window.FloatChrome = (() => {
     { href: 'index.html', label: 'Float' },
     { href: 'build.html', label: 'Build' },
     { href: '../stack/index.html', label: 'Stack' },
+    { href: '../split/index.html', label: 'Split' },
   ];
   const COLORWAYS = [
     { id: 'neutral', label: 'Neutral', swatch: '#F6EFE8' },
