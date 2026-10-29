@@ -6,7 +6,7 @@
 
 :root, [data-colorway="navy"] {
   --page: #FDF9F7;
-  --glow: rgba(255, 220, 196, .55); /* frame gradient peach (fades from 0) */
+  --glow: rgba(255, 220, 196, .69); /* frame gradient peach (fades from 0) */
   --glow-0: rgba(255, 220, 196, 0);
   --panel: linear-gradient(115.65deg, rgba(6, 89, 152, 0) 31.95%, #065998 100%), #012346;
   --ink: #FAF4EE;
@@ -27,7 +27,7 @@ body { overflow-x: hidden; font-family: 'Montserrat', sans-serif; -webkit-font-s
 .hero {
   position: relative; height: 100vh; min-height: 520px; background: var(--page);
   background: linear-gradient(var(--sweep), var(--glow-0) 31.95%, var(--glow) 100%) var(--page);
-  animation: sweep 48s linear infinite;
+  animation: sweep 36s linear infinite;
 }
 @media (prefers-reduced-motion: reduce) { .hero { animation: none; } }
 .stage { position: absolute; left: 50%; top: 50%; width: 1440px; height: 728px; transform-origin: 0 0; z-index: 1; }
